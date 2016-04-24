@@ -139,12 +139,32 @@ public class PlaceOfRealAction extends StereoTask {
     
     public void moveRays2()
     {
-        ray2Subscene.setTranslation(moveX, moveY, 0);
+        ray2Subscene.setTranslation(moveX, moveY, moveZ);
     }
     
     public void rotateRays2()
     {
         ray2Subscene.setRotation(angleX, angleY, 0);
+    }
+    
+    @Override
+    public double[] getVector()
+    {
+        return new double[]{moveX, moveY, moveZ, handle.vertex[0][0], handle.vertex[0][1], handle.vertex[0][2]}; 
+    }
+
+    @Override
+    public void setVector(double[] vec)
+    {
+        moveX = vec[0]; 
+        moveY = vec[1];
+        moveZ = vec[2];
+        handle.vertex[0][0] = vec[3];
+        handle.vertex[0][1] = vec[4];
+        handle.vertex[0][2] = vec[5];
+        
+        moveRays2();
+        applyHandle();
     }
     
     void applyHandle()
@@ -178,7 +198,26 @@ public class PlaceOfRealAction extends StereoTask {
     
     void cheat()
     {
+        double bulgarianScale = projectionScale; 
+        handle.vertex[0][0] = 0;
+        handle.vertex[0][1] = 0;
+        handle.vertex[0][2] = -bulgarianScale;
+        Object3D anchor = new Object3D(1, 0, 0);
+        anchor.vertex[0][0] = 0;
+        anchor.vertex[0][1] = 0;
+        anchor.vertex[0][2] = 0;
         
+        
+        Scene3D cheatScene = new Scene3D();
+        cheatScene.add(handle);
+        cheatScene.add(anchor);
+        
+        cheatScene.setRotation(-originAx, -originAy, 0);
+        cheatScene.project();
+        
+        setVector(new double[]{
+            anchor.transformed[0][0], anchor.transformed[0][1], anchor.transformed[0][2], 
+            handle.transformed[0][0], handle.transformed[0][1], handle.transformed[0][2]});        
     }
     
     @Override
@@ -191,12 +230,17 @@ public class PlaceOfRealAction extends StereoTask {
     }
 
     double originAx = 0.4;
-    double originAy = 0.1;
+    double originAy = 0;
+    
+    /*
+     this is also a target focalLength !!!!
+    */
     double projectionScale = 10;
+    double originZTranslation = 40;
+    
     
     void processObject(Object3D obj)
-    {
-        
+    {        
         origin_projection_1 = new double[obj.projected.length][2];
         origin_projection_2 = new double[obj.projected.length][2];
         origin_triangles = new int[obj.triangles.length][obj.triangles[0].length];
@@ -209,7 +253,7 @@ public class PlaceOfRealAction extends StereoTask {
             }
         }
         
-        obj.setTranslation(0,0,40);
+        obj.setTranslation(0,0,originZTranslation);
         obj.project();
         
         for (int i=0; i<origin_projection_1.length; i++)
@@ -696,6 +740,14 @@ public class PlaceOfRealAction extends StereoTask {
             }
         }); 
         
+        JButton cheatButton = new JButton(new AbstractAction("cheat"){
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                cheat();
+            }
+        });
+        
         JButton relaxButton = new JButton(new AbstractAction("r"){
 
             @Override
@@ -741,6 +793,7 @@ public class PlaceOfRealAction extends StereoTask {
         panel.add(unknownAngleInput);
         panel.add(scaleInput);
         panel.add(mutationTf);
+        panel.add(cheatButton);
         panel.add(relaxButton);
         panel.add(evolveButton);
 
@@ -760,25 +813,6 @@ public class PlaceOfRealAction extends StereoTask {
 //        frame.setSize(300, 300);
 //        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 //        frame.setVisible(true);
-    }
-    
-    @Override
-    public double[] getVector()
-    {
-        return new double[]{moveX, moveY, moveZ, handle.vertex[0][0], handle.vertex[0][1], handle.vertex[0][2]}; 
-    }
-
-    @Override
-    public void setVector(double[] vec)
-    {
-        moveX = vec[0]; 
-        moveY = vec[1];
-        moveZ = vec[2];
-        handle.vertex[0][0] = vec[3];
-        handle.vertex[0][1] = vec[4];
-        handle.vertex[0][2] = vec[5];
-        
-        applyHandle();
     }
     
     public void evolve()
