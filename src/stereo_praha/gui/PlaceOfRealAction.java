@@ -68,6 +68,9 @@ public class PlaceOfRealAction extends StereoTask {
 
     double mutationStrength = 0.5; 
     int test;
+    
+    Thread animationThread = null;
+    
 
     public PlaceOfRealAction(Object3D obj)
     {
@@ -184,6 +187,7 @@ public class PlaceOfRealAction extends StereoTask {
         double aa = a[0];
         double bb = a[1];
         
+        
         if (aa > Math.PI) {
             aa = 2*Math.PI - aa;
         } 
@@ -191,6 +195,9 @@ public class PlaceOfRealAction extends StereoTask {
             bb = 2*Math.PI - bb;
         } 
 
+        if (Double.isNaN(aa)) {
+           System.out.println("nan!!!!");
+        }
         
         System.out.println(">>>" + aa + ", " + bb + " / " + a[0] + ", " + a[1]);
         
@@ -217,7 +224,9 @@ public class PlaceOfRealAction extends StereoTask {
         
         setVector(new double[]{
             anchor.transformed[0][0], anchor.transformed[0][1], anchor.transformed[0][2], 
-            handle.transformed[0][0], handle.transformed[0][1], handle.transformed[0][2]});        
+            handle.transformed[0][0], handle.transformed[0][1], handle.transformed[0][2]});   
+        
+        panel.repaint();
     }
     
     @Override
@@ -450,8 +459,13 @@ public class PlaceOfRealAction extends StereoTask {
             maxe = (maxe < e) ? e : maxe;
             
             error += e;
-            
+            if (Double.isNaN(error))
+            {
+                System.out.println("nan!");
+            }           
         }
+        gold.setTranslation(-(maxx+minx)/2, -(maxy+miny)/2, -(maxz+minz)/2 + 60);
+        
         minimalZ = minz;
         for (int j=0; j<origin_triangles.length; j++)
         {
@@ -473,15 +487,26 @@ public class PlaceOfRealAction extends StereoTask {
         
         error /= links.size();
 
-        penalty = Math.exp(-minz + focalLength);
-        penalty = penalty * penalty + 1;
+        
+        if (minz < -focalLength/2)
+        {
+            penalty = -focalLength/2 - minz;
+            penalty = penalty * penalty + 1;
+        } else
+        {
+            penalty = 1.0;
+        }
+//        penalty = Math.exp(-minz + focalLength);
             
         error *= penalty;
 //        calcVectorError();
 //        if (vectorError == Double.NaN)
 //            return Double.POSITIVE_INFINITY;
+//        
+//        error *= Math.abs(vectorError);
         
-//        error *= Math.abs(vectorError)*100;
+        
+        
         return error;
     }
 
@@ -575,6 +600,13 @@ public class PlaceOfRealAction extends StereoTask {
    
     
     void draw(Graphics g) {
+        if (animationThread != null)
+        {
+           if (System.currentTimeMillis()/500 % 2 == 0) {
+               g.setColor(Color.red);
+               g.fillRect(10, 10, 20, 20);
+           }   
+        }
         int mx = panel.getWidth()/2;
         int my = panel.getHeight()/2;
 
@@ -752,24 +784,30 @@ public class PlaceOfRealAction extends StereoTask {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                new Thread(new Runnable(){
+                animationThread = new Thread(new Runnable(){
                     @Override
                     public void run() {
                         relax();
+                        animationThread = null;
+                        panel.repaint();
                     }
-                }).start();
+                });
+                animationThread.start();
             }
         });
         JButton evolveButton = new JButton(new AbstractAction("e"){
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                new Thread(new Runnable(){
+                animationThread = new Thread(new Runnable(){
                     @Override
                     public void run() {
                         evolve();
+                        animationThread = null;
+                        panel.repaint();
                     }
-                }).start();
+                });
+                animationThread.start();
             }
         });
         
@@ -822,7 +860,7 @@ public class PlaceOfRealAction extends StereoTask {
         RealAgent etalon = new RealAgent(PlaceOfRealAction.this);
 
         
-        reactor.initPopulation( etalon, 70, mutationStrength*10, mutationStrength, 0.5);
+        reactor.initPopulation( etalon, 70, mutationStrength*60, mutationStrength, 0.5);
         System.out.println("mutation:" + reactor.getMutationStrength());
         
         AbstractAgent boss = null;
@@ -844,7 +882,7 @@ public class PlaceOfRealAction extends StereoTask {
     public void relax()
     {
         
-        AbstractReliever reliever = new AbstractReliever(getVector(), mutationStrength) {
+        AbstractReliever reliever = new AbstractReliever(getVector(), 2) {
             
             @Override
             public double getTension(double[] x) {
@@ -854,20 +892,36 @@ public class PlaceOfRealAction extends StereoTask {
             }
         };
         
+        ArrayList<Double> series = new ArrayList<>();
         int i;
         for (i=0; i<50; i++) {
             double error = reliever.relax();
+            series.add(error);
             System.out.println("->" + error);
             if (Double.isNaN(error))
                 return;
             setVector(reliever.getX());
-            applySolution();  
-            scene.project();
             panel.repaint();
+                   
+            if (reliever.isZipp()){
+                System.out.println("ZIP!");
+                reliever.halfStepSize();
+            }
+            
             try {
                 Thread.sleep(100);  
             } catch(InterruptedException ex){}
         }      
+        
+        double[] data = new double[series.size()];
+        for (i=0; i<data.length; i++) {
+            data[i] = series.get(i);
+        }
+ 
+        
+        graphPanel.clearGraphs();
+        graphPanel.addGraph(data, "E");
+        graphPanel.repaint();
     }
     
     public static void main(String[] args) {

@@ -14,8 +14,8 @@ public class stuff3D {
             Algebra.multiply4_4x4(m, src[i], dest[i]);
             double z = dest[i][2];
             if (z <= 0) {
-                projection[i][0] = Double.NaN;
-                projection[i][1] = Double.NaN;
+                projection[i][0] = -1000000;
+                projection[i][1] = -1000000;
 
                 continue;
             }

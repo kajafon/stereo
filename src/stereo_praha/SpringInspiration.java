@@ -65,7 +65,7 @@ public class SpringInspiration {
             
             double[] res = Algebra.linesDistanceSquare(v1, obj1.transformed[i], v2, obj2.transformed[i]);
             
-            if (res[1] == Double.NaN) 
+            if (Double.isNaN(res[1])) 
             {    
                 System.out.println("invalid distance: " + res);
                 continue; 

@@ -47,8 +47,13 @@ public abstract class AbstractReliever {
     }
 
     boolean zippDetected;
+    
+    public void halfStepSize()
+    {
+        stepSize /= 2;
+    }
 
-    private boolean isZipp()
+    public boolean isZipp()
     {
         return stepsCount > 4 &&
                Algebra.simpleDistance(track[0], track[1]) > Algebra.simpleDistance(track[0], track[2]) &&
@@ -136,6 +141,8 @@ public abstract class AbstractReliever {
         }
 
         stepsCount++;
+        
+        pushX();
 
         return val;
     }
