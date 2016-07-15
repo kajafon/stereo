@@ -10,7 +10,7 @@ import stereo_praha.Algebra;
 
 /**
  *
- * @author macbook
+ * @author karol presovsky
  */
 public abstract class Something3D {
 

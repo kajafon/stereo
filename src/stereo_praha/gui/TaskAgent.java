@@ -9,7 +9,7 @@ import evolve.AbstractAgent;
 
 /**
  *
- * @author macbook
+ * @author karol presovsky
  */
 public class TaskAgent extends AbstractAgent {
 

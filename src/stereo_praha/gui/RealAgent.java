@@ -9,7 +9,7 @@ import evolve.AbstractAgent;
 
 /**
  *
- * @author macbook
+ * @author karol presovsky
  */
 public class RealAgent extends AbstractAgent {
 

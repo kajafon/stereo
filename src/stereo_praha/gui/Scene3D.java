@@ -6,7 +6,7 @@ import java.util.ArrayList;
 
 /**
  *
- * @author macbook
+ * @author karol presovsky
  */
 public class Scene3D extends Something3D {
     

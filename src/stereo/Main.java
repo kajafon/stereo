@@ -94,7 +94,8 @@ public class Main
            @Override
            public void actionPerformed(ActionEvent e)
            {
-               new PlaceOfRealAction(links, faces).demco();
+//               new PlaceOfRealAction(links, faces).demco();
+               System.out.println("not implemented");
            }
         
         }));

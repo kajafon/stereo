@@ -7,7 +7,7 @@ package stereo_praha.gui;
 
 /**
  *
- * @author macbook
+ * @author karol presovsky
  */
 public abstract class StereoTask {
     double focalLength = 20;

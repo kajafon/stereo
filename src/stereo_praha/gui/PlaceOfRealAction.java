@@ -14,6 +14,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import javafx.scene.Scene;
+import javax.swing.border.LineBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import stereo.to3d.Face;
@@ -22,6 +23,16 @@ import static stereo_praha.gui.FieldsOfError.basicScale;
 
 public class PlaceOfRealAction extends StereoTask {
 
+    double originAx = 0.4;
+    double originAy = 0;
+    
+    /*
+     this is also a target focalLength !!!!
+    */
+    double projectionScale = 10;
+    double originZTranslation = 40;
+    
+    
     double scale = 300;
     
     double[][] sourceProjection = null;
@@ -48,6 +59,7 @@ public class PlaceOfRealAction extends StereoTask {
 
     final GraphPanel graphPanel = new GraphPanel();
 
+    JPanel gui;   
     JPanel panel;
     JPanel goldPanel;
     JTextField tfAy = new JTextField(5);
@@ -71,12 +83,15 @@ public class PlaceOfRealAction extends StereoTask {
     
     Thread animationThread = null;
     
-
-    public PlaceOfRealAction(Object3D obj)
+    
+    public PlaceOfRealAction(Object3D obj, double ax, double ay)
     {
+        originAx = ax;
+        originAy = ay;
         processObject(obj);
         init();
     }
+    
     public PlaceOfRealAction(ArrayList<FtrLink> links, ArrayList<Face> faces) {
 
         featureLinks = links;
@@ -106,6 +121,11 @@ public class PlaceOfRealAction extends StereoTask {
         } 
         
         return obj;
+    }
+    
+    Object3D getGold() 
+    {
+        return gold;
     }
     
     Object3D createPlane()
@@ -238,16 +258,6 @@ public class PlaceOfRealAction extends StereoTask {
         reconstruction();
     }
 
-    double originAx = 0.4;
-    double originAy = 0;
-    
-    /*
-     this is also a target focalLength !!!!
-    */
-    double projectionScale = 10;
-    double originZTranslation = 40;
-    
-    
     void processObject(Object3D obj)
     {        
         origin_projection_1 = new double[obj.projected.length][2];
@@ -486,6 +496,7 @@ public class PlaceOfRealAction extends StereoTask {
             return Double.POSITIVE_INFINITY;
         
         error /= links.size();
+        error /= focalLength;
 
         
         if (minz < -focalLength/2)
@@ -699,36 +710,42 @@ public class PlaceOfRealAction extends StereoTask {
         goldPanel.setBackground(Color.red);
         
         final boolean[] animate = {true};
-        new Thread(new Runnable(){
+        if (frame != null) {
+            new Thread(new Runnable(){
 
-            @Override
-            public void run() {
-                System.out.println("running animation");
-                while (!frame.isVisible()) 
-                {
-                    try{
-                       Thread.sleep(1000);
-                    } catch(InterruptedException e){}   
-                }
+                @Override
+                public void run() {
+                    System.out.println("running animation");
+                    int safeCount = 30;
+                    while (!frame.isVisible()) 
+                    {
+                        try{
+                           Thread.sleep(1000);
+                        } catch(InterruptedException e){}   
+                        if (safeCount-- <= 0){
+                            break;
+                        }
+                    }
 
-                while (frame.isVisible()) 
-                {
-                    gold.rotate(0.04, 0.03, 0);
-                    goldScene.project();
-                    goldPanel.repaint();
-                    try{
-                       Thread.sleep(50);
-                    } catch(InterruptedException e){}   
+                    while (frame.isVisible()) 
+                    {
+                        gold.rotate(0.04, 0.03, 0);
+                        goldScene.project();
+                        goldPanel.repaint();
+                        try{
+                           Thread.sleep(50);
+                        } catch(InterruptedException e){}   
+                    }
+                    System.out.println("stopped animation");
                 }
-                System.out.println("stopped animation");
-            }
-        }).start();
+            }).start();
+        }   
         
         return goldPanel;
         
     }
     
-    public void demco()
+    public JPanel buildGui(JFrame frame)
     {
 
         panel = new JPanel() {
@@ -834,16 +851,13 @@ public class PlaceOfRealAction extends StereoTask {
         panel.add(cheatButton);
         panel.add(relaxButton);
         panel.add(evolveButton);
-
-        final JFrame frame = new JFrame("welcome back my friends...");
-        frame.getContentPane().setLayout(new BorderLayout());
-        frame.getContentPane().add(panel, BorderLayout.WEST);
-        frame.getContentPane().add(graphPanel, BorderLayout.SOUTH);
-        frame.getContentPane().add(getGoldPanel(frame), BorderLayout.CENTER);
         
-        frame.setSize(1100, 500);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
+        gui = new JPanel();
+        gui.setLayout(new BorderLayout());
+        gui.add(panel, BorderLayout.WEST);
+        gui.add(graphPanel, BorderLayout.SOUTH);
+        gui.add(getGoldPanel(frame), BorderLayout.CENTER);
+
         
 //        frame = new JFrame("ta co neska?");
 //        frame.getContentPane().setLayout(new BorderLayout());
@@ -851,6 +865,11 @@ public class PlaceOfRealAction extends StereoTask {
 //        frame.setSize(300, 300);
 //        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 //        frame.setVisible(true);
+        
+        gui.setPreferredSize(new Dimension(1100,200));
+        gui.setBorder(new LineBorder(Color.RED, 1));
+        
+        return gui;
     }
     
     public void evolve()
@@ -887,7 +906,6 @@ public class PlaceOfRealAction extends StereoTask {
             @Override
             public double getTension(double[] x) {
                 setVector(x);
-                applySolution();  
                 return goldError;                
             }
         };
@@ -900,7 +918,6 @@ public class PlaceOfRealAction extends StereoTask {
             System.out.println("->" + error);
             if (Double.isNaN(error))
                 return;
-            setVector(reliever.getX());
             panel.repaint();
                    
             if (reliever.isZipp()){
@@ -925,7 +942,15 @@ public class PlaceOfRealAction extends StereoTask {
     }
     
     public static void main(String[] args) {
-        new PlaceOfRealAction(SampleObject.platforms(5)).demco();
+        final JFrame frame = new JFrame("welcome back my friends...");
+        JPanel p = new PlaceOfRealAction(SampleObject.platforms(5),  0.1, 0.15).buildGui(frame);
+        
+        frame.getContentPane().setLayout(new BorderLayout());
+        frame.getContentPane().add(p, BorderLayout.CENTER);
+        frame.setSize(1100, 500);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+
     }
 
 }
