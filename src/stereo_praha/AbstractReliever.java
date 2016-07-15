@@ -59,6 +59,15 @@ public abstract class AbstractReliever {
                Algebra.simpleDistance(track[0], track[1]) > Algebra.simpleDistance(track[0], track[2]) &&
                Algebra.simpleDistance(track[1], track[2]) > Algebra.simpleDistance(track[1], track[3]);
     }
+    
+    public void setZipAverage()
+    {
+        Aggregator z = new Aggregator(x.length);
+        for (double[] v : track) {
+            z.add(v);
+        }        
+        x = z.getAverage();
+    }
 
     public void setTarget(double[] target) {
         this.target = new double[target.length];
@@ -91,6 +100,11 @@ public abstract class AbstractReliever {
     }
 
     public abstract double getTension(double[] x);
+    
+    public double getTension()
+    {
+        return getTension(x);        
+    }
 
     public double relax()
     {

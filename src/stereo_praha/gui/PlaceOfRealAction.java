@@ -170,6 +170,11 @@ public class PlaceOfRealAction extends StereoTask {
         ray2Subscene.setRotation(angleX, angleY, 0);
     }
     
+    public double getError()
+    {
+        return goldError;
+    }
+    
     @Override
     public double[] getVector()
     {
@@ -246,7 +251,8 @@ public class PlaceOfRealAction extends StereoTask {
             anchor.transformed[0][0], anchor.transformed[0][1], anchor.transformed[0][2], 
             handle.transformed[0][0], handle.transformed[0][1], handle.transformed[0][2]});   
         
-        panel.repaint();
+        if (panel != null)
+            panel.repaint();
     }
     
     @Override
@@ -761,21 +767,7 @@ public class PlaceOfRealAction extends StereoTask {
         panel.addMouseMotionListener(ma);
         panel.addMouseListener(ma);
         panel.setPreferredSize(new Dimension(700,500));
-
-
-        JSlider unknownAngleInput = new JSlider(JSlider.HORIZONTAL, -100, 100, 0);
-        unknownAngleInput.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                JSlider sldr = (JSlider)e.getSource();
-                unknownAngle = (double)sldr.getValue()/100.0 * 2;
-                buildTask();
-                scene.project();
-                goldScene.project();                
-                panel.repaint();
-            }
-        });        
-        
+              
         JSlider scaleInput = new JSlider(JSlider.HORIZONTAL, 10, 400, 300);
         scaleInput.addChangeListener(new ChangeListener() {
             @Override
@@ -845,7 +837,6 @@ public class PlaceOfRealAction extends StereoTask {
         });
         
         panel.setFocusable(true);
-        panel.add(unknownAngleInput);
         panel.add(scaleInput);
         panel.add(mutationTf);
         panel.add(cheatButton);
@@ -897,10 +888,7 @@ public class PlaceOfRealAction extends StereoTask {
         System.out.println("    h:" + handle.vertex[0][0] + ", " + handle.vertex[0][1] + ", " + handle.vertex[0][2]);
     }
 
-    
-    public void relax()
-    {
-        
+    public void relax() {
         AbstractReliever reliever = new AbstractReliever(getVector(), 2) {
             
             @Override
@@ -910,34 +898,48 @@ public class PlaceOfRealAction extends StereoTask {
             }
         };
         
-        ArrayList<Double> series = new ArrayList<>();
+        relax_routine(reliever, panel, graphPanel);
+        
+    } 
+    
+    public static void relax_routine(AbstractReliever reliever, JPanel panel, GraphPanel graphPanel)
+    {
+        ArrayList<Double> err_series = new ArrayList<>();
+
         int i;
-        for (i=0; i<50; i++) {
+        
+        int halvingCount = 5;
+        
+        graphPanel.clearGraphs();
+        graphPanel.clearMarks();
+
+        err_series.add(reliever.getTension());
+        for (i=0; i<50; i++) 
+        {
             double error = reliever.relax();
-            series.add(error);
+            err_series.add(error);
             System.out.println("->" + error);
             if (Double.isNaN(error))
                 return;
             panel.repaint();
                    
-            if (reliever.isZipp()){
-                System.out.println("ZIP!");
-                reliever.halfStepSize();
-            }
+//            if (reliever.isZipp() && halvingCount > 0){
+//                System.out.println("ZIP!");
+//                reliever.halfStepSize();
+//                reliever.setZipAverage();
+//                graphPanel.addMark(i);
+//                halvingCount--;
+//            }
             
             try {
                 Thread.sleep(100);  
             } catch(InterruptedException ex){}
         }      
         
-        double[] data = new double[series.size()];
-        for (i=0; i<data.length; i++) {
-            data[i] = series.get(i);
-        }
- 
         
-        graphPanel.clearGraphs();
-        graphPanel.addGraph(data, "E");
+        graphPanel.addGraph(err_series, "E");
+        
+        panel.repaint();
         graphPanel.repaint();
     }
     

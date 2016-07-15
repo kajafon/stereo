@@ -86,11 +86,19 @@ public class GraphPanel extends JPanel
 
         double [] series;
 
+        public DoubleGraph(ArrayList<Double> series)
+        {
+            double[] data = new double[series.size()];
+            for (int i=0; i<data.length; i++) {
+                data[i] = series.get(i);
+            }
+            this.series = data;
+        }
+
         public DoubleGraph(double[] series)
         {
             this.series = series;
         }
-
 
         @Override
         public double get(int i)
@@ -238,6 +246,12 @@ public class GraphPanel extends JPanel
         maxValue = -1000000;
         minValue = 1000000;
 
+    }
+
+    public void addGraph(ArrayList<Double> graph, String name)
+    {
+        this.graphs.add(new DoubleGraph(graph));
+        this.graphNames.add(name);
     }
 
     public void addGraph(double[] graph, String name)

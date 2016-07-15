@@ -36,6 +36,12 @@ public abstract class StereoTask {
         moveZ = vec[4];
         focalLength = vec[5]; 
     }
+
+    public double getFocalLength() {
+        return focalLength;
+    }
+    
+    
     
     public abstract void applySolution();
     
