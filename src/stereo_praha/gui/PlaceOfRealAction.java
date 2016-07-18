@@ -52,23 +52,19 @@ public class PlaceOfRealAction extends StereoTask {
     Scene3D goldScene = new Scene3D("goldScene");
     double invarianceError;
     double minimalZ;
+    double goldSize;
     double penalty;
     
     ArrayList<Object3D> links;
     ArrayList<Face> faceList;
 
-    final GraphPanel graphPanel = new GraphPanel();
 
-    JPanel gui;   
-    JPanel panel;
-    JPanel goldPanel;
     JTextField tfAy = new JTextField(5);
     JTextField tfAx = new JTextField(5);
 
     ArrayList<FtrLink> featureLinks;
     
     double unknownAngle = 0.2;
-    int activeObject = 0;
     
     double[][] origin_projection_1;
     double[][] origin_projection_2;
@@ -81,7 +77,6 @@ public class PlaceOfRealAction extends StereoTask {
     double mutationStrength = 0.5; 
     int test;
     
-    Thread animationThread = null;
     
     
     public PlaceOfRealAction(Object3D obj, double ax, double ay)
@@ -224,7 +219,7 @@ public class PlaceOfRealAction extends StereoTask {
            System.out.println("nan!!!!");
         }
         
-        System.out.println(">>>" + aa + ", " + bb + " / " + a[0] + ", " + a[1]);
+//        System.out.println(">>>" + aa + ", " + bb + " / " + a[0] + ", " + a[1]);
         
     }
     
@@ -251,8 +246,6 @@ public class PlaceOfRealAction extends StereoTask {
             anchor.transformed[0][0], anchor.transformed[0][1], anchor.transformed[0][2], 
             handle.transformed[0][0], handle.transformed[0][1], handle.transformed[0][2]});   
         
-        if (panel != null)
-            panel.repaint();
     }
     
     @Override
@@ -439,15 +432,17 @@ public class PlaceOfRealAction extends StereoTask {
         } else {
             gold.init(links.size(), origin_triangles.length, origin_triangles[0].length);
         }
-        double error = 0;
-        double maxx = -10000;
-        double maxy = -10000;
-        double maxz = -10000;
-        double minx = 10000;
-        double miny = 10000;
-        double minz = 10000;
         
-        double maxe = 0;
+        for (int j=0; j<origin_triangles.length; j++)
+        {
+            for (int i=0; i<origin_triangles[j].length; i++)
+            {
+                gold.triangles[j][i] = origin_triangles[j][i];
+            }
+        }
+        
+        Aggregator agr = new Aggregator(3);
+        Aggregator agr_e = new Aggregator(1);
                 
         for (int i=0; i<links.size(); i++)
         {
@@ -459,55 +454,32 @@ public class PlaceOfRealAction extends StereoTask {
             gold.vertex[i][0] = x;
             gold.vertex[i][1] = y;
             gold.vertex[i][2] = z;
-                        
-            maxx = (x > maxx) ? x : maxx;
-            maxy = (y > maxy) ? y : maxy;
-            maxz = (z > maxz) ? z : maxz;
-
-            minx = (x < minx) ? x : minx;
-            miny = (y < miny) ? y : miny;
-            minz = (z < minz) ? z : minz;
             
             double e = Math.abs(link.vertex[0][0] - link.vertex[1][0]); 
             e += Math.abs(link.vertex[0][1] - link.vertex[1][1]); 
             e += Math.abs(link.vertex[0][2] - link.vertex[1][2]); 
             
-            maxe = (maxe < e) ? e : maxe;
+            agr.add(gold.vertex[i]);
+            agr_e.add(e);
             
-            error += e;
-            if (Double.isNaN(error))
-            {
-                System.out.println("nan!");
-            }           
-        }
-        gold.setTranslation(-(maxx+minx)/2, -(maxy+miny)/2, -(maxz+minz)/2 + 60);
-        
-        minimalZ = minz;
-        for (int j=0; j<origin_triangles.length; j++)
-        {
-            for (int i=0; i<origin_triangles[j].length; i++)
-            {
-                gold.triangles[j][i] = origin_triangles[j][i];
-            }
         }
         
-        maxx -= minx;
-        maxy -= miny;
-        maxz -= minz;
+        double[] av = agr.getAverage();
+        gold.setTranslation(-av[0], -av[1], -av[2] + 60);
         
-        maxx = (maxx < maxy) ? maxy : maxx;
-        maxx = (maxx < maxz) ? maxz : maxx;
+        minimalZ = agr.min[2];
         
-        if (maxx < 0.000001)
+        goldSize = agr.getSize();
+        
+        if ( goldSize < 0.000001)
             return Double.POSITIVE_INFINITY;
         
-        error /= links.size();
-        error /= focalLength;
+        double error = agr_e.getAverage()[0] / goldSize;
 
         
-        if (minz < -focalLength/2)
+        if (minimalZ < -focalLength/2)
         {
-            penalty = -focalLength/2 - minz;
+            penalty = -focalLength/2 - minimalZ;
             penalty = penalty * penalty + 1;
         } else
         {
@@ -528,342 +500,8 @@ public class PlaceOfRealAction extends StereoTask {
     }
 
 
-    double xGuiToObject(double x)
-    {
-        return ((x - panel.getWidth()/2) + 50)/scale;
-    }
     
-    double yGuiToObject(double y)
-    {
-        return (y - panel.getHeight()/2)/scale;
-    }    
-
-   
-    MouseAdapter createMouseManipulator()
-    {
-        final MouseTracker sceneTracker = new MouseTracker();
-        final MouseTracker taskTracker = new MouseTracker();
-        final MouseTracker moveTracker = new MouseTracker();
-        final MouseTracker originTracker = new MouseTracker();
-        
-        return new MouseAdapter() {
-            MouseTracker getTracker(MouseEvent e) {
-                boolean meta = (e.getModifiersEx()&MouseEvent.META_DOWN_MASK) != 0;
-                boolean alt = (e.getModifiersEx()&MouseEvent.ALT_DOWN_MASK) != 0;
-                boolean ctrl = (e.getModifiersEx()&MouseEvent.CTRL_DOWN_MASK) != 0;
-
-                MouseTracker trck = null;
-
-                if (!(meta|alt|ctrl)) {
-                    activeObject = 0;
-                    trck = sceneTracker;
-                } else if (meta && !(alt || ctrl)) {
-                    activeObject = 1;
-                    trck = taskTracker;
-                } else if (meta && alt) {
-                    activeObject = 4;
-                    trck = moveTracker;
-                } else if (alt && !(meta || ctrl)){
-                    activeObject = 3;
-                    trck = originTracker;
-                } else {    
-                    System.out.println("unknown drag");
-                }
-                return trck;
-
-            }
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (activeObject == 5) {  
-                    double mx = xGuiToObject(e.getX());
-                    double my = yGuiToObject(e.getY());
-                    drag(mx, my);
-                } else {
-                    MouseTracker trck = getTracker(e);
-                    trck.mouseDragged(e);
-                    drag(trck.mouseY/200.0, trck.mouseX/-200.0);
-                }    
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                double mx = xGuiToObject(e.getX());
-                double my = yGuiToObject(e.getY());
-                double boxSize = 10/scale;
-
-                if (mx > handle.projected[0][0]-boxSize && mx < handle.projected[0][0] + boxSize &&
-                    my > handle.projected[0][1]-boxSize && my < handle.projected[0][1] + boxSize)
-                {
-                    activeObject = 5;
-                    scene.project();
-                    handleInverse = Algebra.calcInverse(handle.tmp_matrix, null);
-                } else {
-                    MouseTracker trck = getTracker(e);
-                    trck.mousePressed(e); 
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (activeObject == 5)
-                {
-                    applyHandle();
-                    panel.repaint();
-                }
-            }
-            
-        };
-    }
-   
-    
-    void draw(Graphics g) {
-        if (animationThread != null)
-        {
-           if (System.currentTimeMillis()/500 % 2 == 0) {
-               g.setColor(Color.red);
-               g.fillRect(10, 10, 20, 20);
-           }   
-        }
-        int mx = panel.getWidth()/2;
-        int my = panel.getHeight()/2;
-
-        g.drawLine(mx, my-10, mx, my+10);
-        g.drawLine(mx-10, my, mx+10, my);
-        
-        scene.draw(g, scale, -50, 0);
-        if (goldPanel != null)
-            goldPanel.repaint();
-    }
-
-    void reset() {
-
-        panel.repaint();
-        moveX = 0;
-        moveY = 0;
-        moveZ = 0;
-
-    }
-    
-    double[] handleInverse;
-    void drag(double ax, double ay)
-    {
-        switch (activeObject) {
-            case 0 :
-                scene.setRotation(ax, ay, 0);
-                scene.project();
-                break;
-            case 1 :
-                angleX = ax;
-                angleY = ay;
-                moveRays2();
-                rotateRays2();
-                buildTask();
-                scene.project();
-                break;
-
-            case 4:
-                moveX = -ay*5;
-                moveY = ax*5;
-                moveRays2();
-                rotateRays2();
-                buildTask();
-                scene.project();
-                break;
-            case 5:
-                
-                double[] x = new double[]{ax*handle.transformed[0][2], ay*handle.transformed[0][2], handle.transformed[0][2], 1};
-                double[] y = new double[3];
-                
-                Algebra.multiply4_4x4(handleInverse, x, y);
-                
-                handle.vertex[0][0] = y[0];
-                handle.vertex[0][1] = y[1];
-                handle.vertex[0][2] = y[2];
-                applyHandle();
-                scene.project();
-                
-                break;
-        }
-        panel.repaint();
-    }
-
-    JPanel getGoldPanel(final JFrame frame)
-    {
-        goldPanel = new JPanel()
-        {
-            @Override
-            protected void paintComponent(Graphics g) {
-                g.setColor(Color.GRAY);
-                stuff3D.draw(g, scale/4, origin_triangles, origin_projection_1, -10 - 100, -10);
-                stuff3D.draw(g, scale/4, origin_triangles, origin_projection_2, +10 + 100, -10);
-                if (gold_projection_1 != null)
-                {
-                    g.setColor(Color.WHITE);
-                    stuff3D.draw(g, scale/4, origin_triangles, gold_projection_1, -10 - 100, 0);
-                    stuff3D.draw(g, scale/4, origin_triangles, gold_projection_2, +10 + 100, 0);
-                }
-                
-                g.drawString("E:" + goldError, 12, 12);
-                g.drawString("minz:" + minimalZ, 12, 24);
-                g.drawString("penalty:" + penalty, 12, 36);
-                g.drawString("vec E:" + vectorError, 12, 48);
-                goldScene.draw(g, 4*scale, 0, 0);
-                
-            }
-        };
-        
-        goldPanel.setPreferredSize(new Dimension(300, 300));
-        goldPanel.setBackground(Color.red);
-        
-        final boolean[] animate = {true};
-        if (frame != null) {
-            new Thread(new Runnable(){
-
-                @Override
-                public void run() {
-                    System.out.println("running animation");
-                    int safeCount = 30;
-                    while (!frame.isVisible()) 
-                    {
-                        try{
-                           Thread.sleep(1000);
-                        } catch(InterruptedException e){}   
-                        if (safeCount-- <= 0){
-                            break;
-                        }
-                    }
-
-                    while (frame.isVisible()) 
-                    {
-                        gold.rotate(0.04, 0.03, 0);
-                        goldScene.project();
-                        goldPanel.repaint();
-                        try{
-                           Thread.sleep(50);
-                        } catch(InterruptedException e){}   
-                    }
-                    System.out.println("stopped animation");
-                }
-            }).start();
-        }   
-        
-        return goldPanel;
-        
-    }
-    
-    public JPanel buildGui(JFrame frame)
-    {
-
-        panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                draw(g);
-            }
-        };
-        
-        panel.setLayout(new FlowLayout());
-        MouseAdapter ma = createMouseManipulator();
-        panel.addMouseMotionListener(ma);
-        panel.addMouseListener(ma);
-        panel.setPreferredSize(new Dimension(700,500));
-              
-        JSlider scaleInput = new JSlider(JSlider.HORIZONTAL, 10, 400, 300);
-        scaleInput.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                JSlider sldr = (JSlider)e.getSource();
-                scale = (double)sldr.getValue();
-                buildTask();
-                scene.project();
-                goldScene.project();                
-                panel.repaint();
-            }
-        }); 
-        
-        JButton cheatButton = new JButton(new AbstractAction("cheat"){
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cheat();
-            }
-        });
-        
-        JButton relaxButton = new JButton(new AbstractAction("r"){
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                animationThread = new Thread(new Runnable(){
-                    @Override
-                    public void run() {
-                        relax();
-                        animationThread = null;
-                        panel.repaint();
-                    }
-                });
-                animationThread.start();
-            }
-        });
-        JButton evolveButton = new JButton(new AbstractAction("e"){
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                animationThread = new Thread(new Runnable(){
-                    @Override
-                    public void run() {
-                        evolve();
-                        animationThread = null;
-                        panel.repaint();
-                    }
-                });
-                animationThread.start();
-            }
-        });
-        
-        final JTextField mutationTf = new JTextField(5);
-        mutationTf.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent ev) {
-                if (mutationTf.getText().length() == 0)
-                    return;
-                try {
-                    mutationStrength = new Double(mutationTf.getText());
-                    System.out.println("mutation:" + mutationStrength);
-                } catch(NumberFormatException e) 
-                {
-                    System.out.println("invalid double:" + mutationTf.getText());
-                }    
-            }
-        });
-        
-        panel.setFocusable(true);
-        panel.add(scaleInput);
-        panel.add(mutationTf);
-        panel.add(cheatButton);
-        panel.add(relaxButton);
-        panel.add(evolveButton);
-        
-        gui = new JPanel();
-        gui.setLayout(new BorderLayout());
-        gui.add(panel, BorderLayout.WEST);
-        gui.add(graphPanel, BorderLayout.SOUTH);
-        gui.add(getGoldPanel(frame), BorderLayout.CENTER);
-
-        
-//        frame = new JFrame("ta co neska?");
-//        frame.getContentPane().setLayout(new BorderLayout());
-//        frame.getContentPane().add();
-//        frame.setSize(300, 300);
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        frame.setVisible(true);
-        
-        gui.setPreferredSize(new Dimension(1100,200));
-        gui.setBorder(new LineBorder(Color.RED, 1));
-        
-        return gui;
-    }
-    
-    public void evolve()
+    public void evolve(JPanel panel)
     {
         Reactor reactor = new Reactor();
 
@@ -888,8 +526,8 @@ public class PlaceOfRealAction extends StereoTask {
         System.out.println("    h:" + handle.vertex[0][0] + ", " + handle.vertex[0][1] + ", " + handle.vertex[0][2]);
     }
 
-    public void relax() {
-        AbstractReliever reliever = new AbstractReliever(getVector(), 2) {
+    public AbstractReliever getReliever() {
+        return new AbstractReliever(getVector(), 2) {
             
             @Override
             public double getTension(double[] x) {
@@ -898,62 +536,8 @@ public class PlaceOfRealAction extends StereoTask {
             }
         };
         
-        relax_routine(reliever, panel, graphPanel);
-        
     } 
     
-    public static void relax_routine(AbstractReliever reliever, JPanel panel, GraphPanel graphPanel)
-    {
-        ArrayList<Double> err_series = new ArrayList<>();
-
-        int i;
-        
-        int halvingCount = 5;
-        
-        graphPanel.clearGraphs();
-        graphPanel.clearMarks();
-
-        err_series.add(reliever.getTension());
-        for (i=0; i<50; i++) 
-        {
-            double error = reliever.relax();
-            err_series.add(error);
-            System.out.println("->" + error);
-            if (Double.isNaN(error))
-                return;
-            panel.repaint();
-                   
-//            if (reliever.isZipp() && halvingCount > 0){
-//                System.out.println("ZIP!");
-//                reliever.halfStepSize();
-//                reliever.setZipAverage();
-//                graphPanel.addMark(i);
-//                halvingCount--;
-//            }
-            
-            try {
-                Thread.sleep(100);  
-            } catch(InterruptedException ex){}
-        }      
-        
-        
-        graphPanel.addGraph(err_series, "E");
-        
-        panel.repaint();
-        graphPanel.repaint();
-    }
-    
-    public static void main(String[] args) {
-        final JFrame frame = new JFrame("welcome back my friends...");
-        JPanel p = new PlaceOfRealAction(SampleObject.platforms(5),  0.1, 0.15).buildGui(frame);
-        
-        frame.getContentPane().setLayout(new BorderLayout());
-        frame.getContentPane().add(p, BorderLayout.CENTER);
-        frame.setSize(1100, 500);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-
-    }
 
 }
 

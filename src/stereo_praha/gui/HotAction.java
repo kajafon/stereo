@@ -15,6 +15,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
@@ -30,12 +31,16 @@ public class HotAction {
     PlaceOfRealAction alfa;
     PlaceOfRealAction beta;
     
-    JPanel guiPanel;
-    
+    JPanel guiPanel;    
     GraphPanel graphPanel;
+    JPanel ctrlPanel;
     
     Thread workerThread;
     JTextField errorDisplay;
+    JTextField errorDisplay1;
+    JTextField errorDisplay2;
+    JTextField errorDisplay3;
+    JTextField errorDisplay4;
     
     public HotAction() {
         init();
@@ -56,7 +61,7 @@ public class HotAction {
         graphPanel = new GraphPanel();
         JPanel p = new JPanel(new GridBagLayout());
         
-        JPanel ctrlPanel = new JPanel(){
+        ctrlPanel = new JPanel(){
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
@@ -102,7 +107,11 @@ public class HotAction {
             }
         }));     
         
-        ctrlPanel.add(errorDisplay = new JTextField(6));
+        ctrlPanel.add(errorDisplay = new JTextField(7));
+        ctrlPanel.add(errorDisplay1 = new JTextField(7));
+        ctrlPanel.add(errorDisplay2 = new JTextField(7));
+        ctrlPanel.add(errorDisplay3 = new JTextField(7));
+        ctrlPanel.add(errorDisplay4 = new JTextField(7));
         
         ctrlPanel.setBorder(new LineBorder(Color.yellow, 1));
         ctrlPanel.setPreferredSize(new Dimension(200,50));
@@ -117,10 +126,10 @@ public class HotAction {
         
         c.gridy = 2;
         c.weighty = 1;        
-        p.add(alfa.buildGui(frame), c);
+        p.add(new ActionGui(alfa).getMainPanel(frame), c);
         
         c.gridy = 3;
-        p.add(beta.buildGui(frame), c);
+        p.add(new ActionGui(beta).getMainPanel(frame), c);
         
         c.gridy = 4;
         c.weighty = 0;
@@ -184,22 +193,39 @@ public class HotAction {
                 setVector(x);
                 double e1 = alfa.getError();
                 double e2 = beta.getError();
-                double ef = alfa.getFocalLength() - beta.getFocalLength();
+                double eg = 4*compareGolds();
+                double ef = Math.abs(alfa.getFocalLength() - beta.getFocalLength());
+                
+                eg *= eg;
+                e1 *= e1;
+                e2 *= e2;
                 ef *= ef;
-                double e = compareGolds();
                 
-                e = 0.2*e + e1 + e2 + ef*0.3;
+                double e = eg + e1 + e2 + ef;
                 
-                errorDisplay.setText("" + e);
-                errorDisplay.repaint();
+                errorDisplay1.setText("dG: " + String.format( "%.6f", eg ));
+                errorDisplay2.setText("A: " + String.format( "%.6f", e1));
+                errorDisplay3.setText("B: " + String.format( "%.6f", e2));
+                errorDisplay4.setText("dF: " + String.format( "%.6f", ef));
+                
+                errorDisplay.setText("" + String.format( "%.6f", e));
+                ctrlPanel.repaint();
                 return e;                
             }
         };
         
+        reliever.setErrorToStepFnc(new double[][]{  
+           {0.001, 0.1},
+           {0.01, 0.4},
+           {0.1, 0.7},
+           {1.0, 0.9},
+           {2.0, 1.5}
+        });
+        
         workerThread = new Thread(new Runnable()
         {
             public void run() {        
-                PlaceOfRealAction.relax_routine(reliever, guiPanel, graphPanel);
+                AbstractReliever.relax_routine(reliever, guiPanel, graphPanel);
                 workerThread = null;
             }
         });

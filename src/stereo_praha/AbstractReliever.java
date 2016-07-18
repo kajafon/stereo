@@ -1,5 +1,9 @@
 package stereo_praha;
 
+import java.util.ArrayList;
+import javax.swing.JPanel;
+import stereo_praha.gui.GraphPanel;
+
 /**
  * Created by Karol Presovsky on 8/30/14.
  */
@@ -20,6 +24,8 @@ public abstract class AbstractReliever {
     int stepsCount;
 
     double[][] track;
+    
+    double [][] errorToStepFnc;
 
     public double getVal() {
         return val;
@@ -99,7 +105,48 @@ public abstract class AbstractReliever {
         System.arraycopy(x, 0, this.x, 0, this.x.length);
     }
 
+    public void setStepSize(double stepSize) {
+        this.stepSize = stepSize;
+    }
+    
     public abstract double getTension(double[] x);
+    
+    public void setErrorToStepFnc(double[][] fnc)
+    {
+        errorToStepFnc = fnc;        
+    }
+    
+    public void setStepSizeFromError(double error)
+    {
+        if (errorToStepFnc != null) {
+            stepSize = f(error, errorToStepFnc);
+            if (stepSize < 0.01)
+                stepSize = 0.01;
+            System.out.println("step size: " + stepSize);
+        }        
+    }
+    
+    public static double f(double in, double[][] fnc)
+    {
+        int i = 0;
+        
+        while (i < fnc.length && fnc[i][0] < in)
+            i++;
+        
+        if (i >= fnc.length - 1)
+            return fnc[fnc.length-1][1];
+        
+        double d = fnc[i][1];
+        double x = in - fnc[i][0];
+        double k = (fnc[i+1][1] - fnc[i][1]) 
+            / (fnc[i+1][0] - fnc[i][0]);
+        
+        double v = d + x * k; 
+        if (Double.isNaN(v) || Double.isInfinite(v))
+            System.out.println("pici!");
+        
+        return v;
+    }
     
     public double getTension()
     {
@@ -156,9 +203,43 @@ public abstract class AbstractReliever {
 
         stepsCount++;
         
-        pushX();
-
         return val;
+    }
+    
+    public static void relax_routine(AbstractReliever reliever, JPanel panel, GraphPanel graphPanel)
+    {
+        ArrayList<Double> err_series = new ArrayList<>();
+
+        int i;
+        
+        graphPanel.clearGraphs();
+        graphPanel.clearMarks();
+
+        err_series.add(reliever.getTension());
+        Aggregator agr_err = new Aggregator(1);
+        
+        for (i=0; i<50; i++) 
+        {
+            double error = reliever.relax();
+            agr_err.add(error);
+//            err_series.add(error);
+            System.out.println("->" + error);
+            if (Double.isNaN(error))
+                return;
+            panel.repaint();
+            reliever.setStepSizeFromError(error);
+            err_series.add(reliever.stepSize);
+            
+            try {
+                Thread.sleep(100);  
+            } catch(InterruptedException ex){}
+        }      
+        
+        
+        graphPanel.addGraph(err_series, "E");
+        
+        panel.repaint();
+        graphPanel.repaint();
     }
 
     private void improveZip() {
@@ -223,10 +304,6 @@ public abstract class AbstractReliever {
 
         }
 
-        // y = x * g
-        // x = y / g
-
-
         for (int i=0; i<x.length; i++) {
             double k = gradient[i]/(stepSize *2);
             x[i] -= val / k;
@@ -247,5 +324,31 @@ public abstract class AbstractReliever {
         }
         System.out.println("heald in " + i + ", " + val);
     }
-
+ 
+//    public static void main(String[] args) {
+//        double [][] fnc = new double[][]{
+//           {0.001, 0.1},
+//           {0.01, 0.5},
+//           {0.1, 1},
+//           {1.0, 1.5},
+//           {2.0, 2.0}
+//        };
+//        
+//        double e = 3;
+//        System.out.println("-" + e + " -> " + getStep(e, fnc));
+//        e = 1;
+//        System.out.println("-" + e + " -> " + getStep(e, fnc));
+//        e = 0.5;
+//        System.out.println("-" + e + " -> " + getStep(e, fnc));
+//        e = 0.4;
+//        System.out.println("-" + e + " -> " + getStep(e, fnc));
+//        e = 0.051;
+//        System.out.println("-" + e + " -> " + getStep(e, fnc));
+//        e = 0.0171;
+//        System.out.println("-" + e + " -> " + getStep(e, fnc));
+//        e = 0.0001;
+//        System.out.println("-" + e + " -> " + getStep(e, fnc));
+//        
+//    }
+ 
 }

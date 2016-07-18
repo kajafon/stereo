@@ -26,6 +26,14 @@ public class Aggregator {
         }
     }
     
+    public void add(double x) {
+        count++;
+        sum[0] += x; 
+        if (x > max[0]) max[0] = x;
+        if (x < min[0]) min[0] = x;            
+        
+    }
+    
     public void add(double[] x) {
         count++;
         
@@ -57,11 +65,11 @@ public class Aggregator {
     public double getSize()
     {
         double[] s = getSizes();
-        double v = s[0];
-        for (int i=1; i<max.length; i++) {
-            if (s[i] > v) v = s[i];
+        double out = 0;
+        for (double v : s) {
+            out += v * v;
         }
-        return v;
+        return Math.sqrt(out);
     }
     
 }
