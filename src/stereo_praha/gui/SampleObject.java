@@ -52,7 +52,7 @@ public class SampleObject {
     
     public static Object3D platforms(int count)
     {
-        int stories = 5;
+        int stories = count;
         int size = 5;
         
         double[][] orig_vertex = new double[stories*4][3];
@@ -84,13 +84,13 @@ public class SampleObject {
             }
         }
         
-        for (int i=0; i<4; i++)
-        {
-            for (int j=0; j<stories; j++)
-            {
-                orig_triangles[stories + i][j] = i + j*4;
-            }
-        }
+//        for (int i=0; i<4; i++)
+//        {
+//            for (int j=0; j<stories-1; j++)
+//            {
+//                orig_triangles[stories + i][j] = i + j*4;
+//            }
+//        }
        
         return new Object3D(orig_vertex, orig_triangles);
         

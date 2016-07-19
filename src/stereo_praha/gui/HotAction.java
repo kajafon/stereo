@@ -12,15 +12,16 @@ import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 import stereo_praha.AbstractReliever;
 import stereo_praha.Aggregator;
+import stereo_praha.Algebra;
 
 /**
  *
@@ -28,8 +29,7 @@ import stereo_praha.Aggregator;
  */
 public class HotAction {
     
-    PlaceOfRealAction alfa;
-    PlaceOfRealAction beta;
+    ArrayList<PlaceOfRealAction> solvers = new ArrayList<>();
     
     JPanel guiPanel;    
     GraphPanel graphPanel;
@@ -42,16 +42,16 @@ public class HotAction {
     JTextField errorDisplay3;
     JTextField errorDisplay4;
     
-    public HotAction() {
-        init();
+    public HotAction(int solversCount) {
+        init(solversCount);
     }
         
-    public void init() {
-        alfa = new PlaceOfRealAction(SampleObject.platforms(5), Math.random()*0.3 + 0.05, Math.random()*0.3 + 0.05);
-        beta = new PlaceOfRealAction(SampleObject.platforms(5), Math.random()*0.3 + 0.05, Math.random()*0.3 + 0.05);        
-        
-        alfa.cheat();
-        beta.cheat();
+    public void init(int solversCount) {
+        for (int i=0; i<solversCount; i++){
+            PlaceOfRealAction solver = new PlaceOfRealAction(SampleObject.platforms(10), Math.random()*0.3 + 0.05, Math.random()*0.3 + 0.05);
+            solvers.add(solver);
+            solver.cheat();
+        }
     }
     
     public JPanel getPanel(JFrame frame) {
@@ -123,15 +123,14 @@ public class HotAction {
         c.weighty = 0;
         c.fill = GridBagConstraints.BOTH;
         p.add(ctrlPanel, c);
-        
-        c.gridy = 2;
         c.weighty = 1;        
-        p.add(new ActionGui(alfa).getMainPanel(frame), c);
+
+        for (PlaceOfRealAction solver : solvers) {            
+            c.gridy++;
+            p.add(new ActionGui(solver).getMainPanel(frame), c);
+        }
         
-        c.gridy = 3;
-        p.add(new ActionGui(beta).getMainPanel(frame), c);
-        
-        c.gridy = 4;
+        c.gridy++;
         c.weighty = 0;
         graphPanel.setPreferredSize(new Dimension(500, 50));
         p.add(graphPanel, c);
@@ -141,47 +140,80 @@ public class HotAction {
     
     public double compareGolds()
     {
-        Object3D g1 = alfa.getGold();
-        Object3D g2 = beta.getGold();
+        ArrayList<Aggregator> verticeAggr = new ArrayList<>();
         
-        double e_sum = 0;
-        
-        Aggregator a1 = new Aggregator(3);
-        Aggregator a2 = new Aggregator(3);
-        
-        for (int i=0; i<g1.vertex.length; i++)
+        // init aggregator for every vertice in gold object
+        for (int i=0; i<solvers.get(0).getGold().vertex.length; i++)
         {
-            a1.add(g1.vertex[i]);
-            a2.add(g2.vertex[i]);
-            double vx = g1.vertex[i][0] - g2.vertex[i][0];
-            double vy = g1.vertex[i][1] - g2.vertex[i][1];
-            double vz = g1.vertex[i][2] - g2.vertex[i][2];
-            
-            e_sum += vx*vx + vy*vy + vz*vz;
+            verticeAggr.add(new Aggregator(3));
         }
         
-        e_sum /= g1.vertex.length;
-        e_sum /= a1.getSize() + a2.getSize();
+        // for all vertices accross all versions of gold aggregate found coordinates
+        for (int i=0; i<solvers.size(); i++)
+        {  
+            Object3D gold = solvers.get(i).getGold();
+            for (int j=0; j<gold.vertex.length; j++)
+            {
+               verticeAggr.get(j).add(gold.vertex[j]);
+            }   
+        }
         
-        return e_sum;
+        // 1 store average gold vertices
+        // 2 aggregate vertices for estimation of size of gold object
+        Aggregator sizeAgg = new Aggregator(3);
+        ArrayList<double[]> verticeAvg = new ArrayList<>();
+        for (Aggregator ag : verticeAggr)
+        {
+            double[] vertice = ag.getAverage();
+            verticeAvg.add(vertice);
+            sizeAgg.add(vertice);
+        }
+        
+        // aggregate deviations from average vertice position in average gold object
+        Aggregator errorAgg = new Aggregator(3);
+        double[] tmp = new double[3];
+        for (int i=0; i<solvers.size(); i++)
+        {  
+            Object3D gold = solvers.get(i).getGold();
+            for (int j=0; j<gold.vertex.length; j++)
+            {
+               Algebra.difference(verticeAvg.get(j), gold.vertex[j], tmp);
+               tmp[0] = Math.abs(tmp[0]);
+               tmp[1] = Math.abs(tmp[1]);
+               tmp[2] = Math.abs(tmp[2]);
+               errorAgg.add(tmp);
+            }   
+        }
+        
+        // calc symbolic scalar deviation from average gold object
+        double[] _e = errorAgg.getAverage();
+        double e = _e[0]*_e[0] + _e[1]*_e[1] + _e[2]*_e[2];
+        
+        e /= sizeAgg.getSize();
+        
+        return e;
     }
     
     public double[] getVector()
     {
-        double[] vec = new double[12];
-        double[] v = alfa.getVector();
-        System.arraycopy(v, 0, vec, 0, 6);
-        v = beta.getVector();
-        System.arraycopy(v, 0, vec, 6, 6);
+        double[] vec = new double[6*solvers.size()];
+        
+        for (int i=0; i<solvers.size(); i++) {
+            double[] v = solvers.get(i).getVector();
+            System.arraycopy(v, 0, vec, i*6, 6);
+        }
         return vec;        
     }
     
     public void setVector(double[] vec)
     {
-        alfa.setVector(vec);
         double[] v = new double[6];
-        System.arraycopy(vec, 6, v, 0, 6);
-        beta.setVector(v);
+        
+        for (int i=0; i<solvers.size(); i++) {            
+            System.arraycopy(vec, i*6, v, 0, 6);
+            solvers.get(i).setVector(v);            
+        }
+
         getPanel(null).repaint();        
     }
   
@@ -191,22 +223,20 @@ public class HotAction {
             @Override
             public double getTension(double[] x) {
                 setVector(x);
-                double e1 = alfa.getError();
-                double e2 = beta.getError();
+                double es = 0;
+                for (PlaceOfRealAction solver : solvers)
+                {
+                    es += solver.goldError * solver.goldError;
+                }
+
                 double eg = 4*compareGolds();
-                double ef = Math.abs(alfa.getFocalLength() - beta.getFocalLength());
                 
                 eg *= eg;
-                e1 *= e1;
-                e2 *= e2;
-                ef *= ef;
                 
-                double e = eg + e1 + e2 + ef;
+                double e = eg + es;
                 
                 errorDisplay1.setText("dG: " + String.format( "%.6f", eg ));
-                errorDisplay2.setText("A: " + String.format( "%.6f", e1));
-                errorDisplay3.setText("B: " + String.format( "%.6f", e2));
-                errorDisplay4.setText("dF: " + String.format( "%.6f", ef));
+                errorDisplay2.setText("es: " + String.format( "%.6f", es));
                 
                 errorDisplay.setText("" + String.format( "%.6f", e));
                 ctrlPanel.repaint();
@@ -235,7 +265,7 @@ public class HotAction {
     
     public static void main(String[] args) {
         final JFrame frame = new JFrame("welcome back my friends...");
-        JPanel p = new HotAction().getPanel(frame);
+        JPanel p = new HotAction(4).getPanel(frame);
         
         frame.getContentPane().setLayout(new BorderLayout());
         frame.getContentPane().add(p, BorderLayout.CENTER);
