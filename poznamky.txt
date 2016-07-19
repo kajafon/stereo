@@ -1,0 +1,6 @@
+20160719
+
+- chcelo by to urobit audit ci sa to v hotaction pocita fajn po zmene na variabilny pocet solverov
+- zda sa, ze to funguje pri viacerych pohladoch a pri mnohych vrcholoch hladanej geometrie. 
+- chce to vyladit a hlavne zrychlit konvergenciu: zavislost velkosti chyby a velkosti kroku pri relaxacii
+- obratit pozornost na 2d cast: triangulacna kontrola a vyhadzovanie bludnych liniek.
