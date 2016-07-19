@@ -48,7 +48,7 @@ public class HotAction {
         
     public void init(int solversCount) {
         for (int i=0; i<solversCount; i++){
-            PlaceOfRealAction solver = new PlaceOfRealAction(SampleObject.platforms(10), Math.random()*0.3 + 0.05, Math.random()*0.3 + 0.05);
+            PlaceOfRealAction solver = new PlaceOfRealAction(SampleObject.platforms(20), Math.random()*0.3 + 0.05, Math.random()*0.3 + 0.05);
             solvers.add(solver);
             solver.cheat();
         }
@@ -245,10 +245,9 @@ public class HotAction {
         };
         
         reliever.setErrorToStepFnc(new double[][]{  
-           {0.001, 0.1},
-           {0.01, 0.4},
-           {0.1, 0.7},
-           {1.0, 0.9},
+           {0.000001, 0.1},
+           {0.0001, 0.5},
+           {0.001, 1},
            {2.0, 1.5}
         });
         

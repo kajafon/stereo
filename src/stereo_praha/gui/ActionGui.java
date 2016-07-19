@@ -395,7 +395,7 @@ public class ActionGui {
     
     public static void main(String[] args) {
         final JFrame frame = new JFrame("welcome back my friends...");
-        PlaceOfRealAction solver = new PlaceOfRealAction(SampleObject.platforms(5),  0.1, 0.15);
+        PlaceOfRealAction solver = new PlaceOfRealAction(SampleObject.platforms(25),  0.1, 0.15);
         ActionGui gui = new ActionGui(solver);
         JPanel p = gui.getMainPanel(frame);
         
