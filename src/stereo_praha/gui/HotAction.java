@@ -29,7 +29,7 @@ import stereo_praha.Algebra;
  */
 public class HotAction {
     
-    ArrayList<PlaceOfRealAction> solvers = new ArrayList<>();
+    ArrayList<SteroSolver> solvers = new ArrayList<>();
     
     JPanel guiPanel;    
     GraphPanel graphPanel;
@@ -45,10 +45,14 @@ public class HotAction {
     public HotAction(int solversCount) {
         init(solversCount);
     }
+    
+    public SteroSolver getSolver(int i) {
+        return solvers.get(i);
+    }
         
     public void init(int solversCount) {
         for (int i=0; i<solversCount; i++){
-            PlaceOfRealAction solver = new PlaceOfRealAction(SampleObject.platforms(20), Math.random()*0.3 + 0.05, Math.random()*0.3 + 0.05);
+            SteroSolver solver = new SteroSolver(SampleObject.platforms(20), Math.random()*0.3 + 0.05, Math.random()*0.3 + 0.05);
             solvers.add(solver);
             solver.cheat();
         }
@@ -125,7 +129,7 @@ public class HotAction {
         p.add(ctrlPanel, c);
         c.weighty = 1;        
 
-        for (PlaceOfRealAction solver : solvers) {            
+        for (SteroSolver solver : solvers) {            
             c.gridy++;
             p.add(new ActionGui(solver).getMainPanel(frame), c);
         }
@@ -224,7 +228,7 @@ public class HotAction {
             public double getTension(double[] x) {
                 setVector(x);
                 double es = 0;
-                for (PlaceOfRealAction solver : solvers)
+                for (SteroSolver solver : solvers)
                 {
                     es += solver.goldError * solver.goldError;
                 }

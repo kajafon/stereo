@@ -21,15 +21,12 @@ import stereo.to3d.Face;
 import stereo.to3d.FtrLink;
 import static stereo_praha.gui.FieldsOfError.basicScale;
 
-public class PlaceOfRealAction extends StereoTask {
+public class SteroSolver extends StereoTask {
 
     double originAx = 0.4;
     double originAy = 0;
     
-    /*
-     this is also a target focalLength !!!!
-    */
-    double projectionScale = 10;
+    double projectionScale = 15;
     double originZTranslation = 40;
     
     
@@ -37,7 +34,7 @@ public class PlaceOfRealAction extends StereoTask {
     
     double[][] sourceProjection = null;
     
-
+    Object3D origin;
     Object3D rays1 = new Object3D();
     Object3D rays2 = new Object3D();
     Object3D plane1 = new Object3D();
@@ -79,15 +76,16 @@ public class PlaceOfRealAction extends StereoTask {
     
     
     
-    public PlaceOfRealAction(Object3D obj, double ax, double ay)
+    public SteroSolver(Object3D obj, double ax, double ay)
     {
+        origin = obj;
         originAx = ax;
         originAy = ay;
-        processObject(obj);
+        processObject();
         init();
     }
     
-    public PlaceOfRealAction(ArrayList<FtrLink> links, ArrayList<Face> faces) {
+    public SteroSolver(ArrayList<FtrLink> links, ArrayList<Face> faces) {
 
         featureLinks = links;
         faceList = faces;
@@ -225,14 +223,15 @@ public class PlaceOfRealAction extends StereoTask {
     
     void cheat()
     {
-        double bulgarianScale = projectionScale; 
+        double originFromZero = originZTranslation - projectionScale;
+         
         handle.vertex[0][0] = 0;
         handle.vertex[0][1] = 0;
-        handle.vertex[0][2] = -bulgarianScale;
+        handle.vertex[0][2] = -originZTranslation;
         Object3D anchor = new Object3D(1, 0, 0);
         anchor.vertex[0][0] = 0;
         anchor.vertex[0][1] = 0;
-        anchor.vertex[0][2] = 0;
+        anchor.vertex[0][2] = -originFromZero; // projectionScale is a focal length of the problem
         
         
         Scene3D cheatScene = new Scene3D();
@@ -240,6 +239,7 @@ public class PlaceOfRealAction extends StereoTask {
         cheatScene.add(anchor);
         
         cheatScene.setRotation(-originAx, -originAy, 0);
+        cheatScene.setTranslation(0, 0, originFromZero);
         cheatScene.project();
         
         setVector(new double[]{
@@ -257,38 +257,46 @@ public class PlaceOfRealAction extends StereoTask {
         reconstruction();
     }
 
-    void processObject(Object3D obj)
+    void processObject()
     {        
-        origin_projection_1 = new double[obj.projected.length][2];
-        origin_projection_2 = new double[obj.projected.length][2];
-        origin_triangles = new int[obj.triangles.length][obj.triangles[0].length];
+        origin_projection_1 = new double[origin.projected.length][2];
+        origin_projection_2 = new double[origin.projected.length][2];
+        origin_triangles = new int[origin.triangles.length][origin.triangles[0].length];
         
-        for (int i=0; i<obj.triangles.length; i++)
+        for (int i=0; i<origin.triangles.length; i++)
         {
-            for (int j=0; j<obj.triangles[0].length; j++)
+            for (int j=0; j<origin.triangles[0].length; j++)
             {
-                origin_triangles[i][j] = obj.triangles[i][j];
+                origin_triangles[i][j] = origin.triangles[i][j];
             }
         }
         
-        obj.setTranslation(0,0,originZTranslation);
-        obj.project();
+        origin.setTranslation(0,0,originZTranslation);
+        origin.project();
+        
+
+        focalLength = projectionScale;
         
         for (int i=0; i<origin_projection_1.length; i++)
         {
-            origin_projection_1[i][0] = obj.projected[i][0]*projectionScale;
-            origin_projection_1[i][1] = obj.projected[i][1]*projectionScale;
+            origin_projection_1[i][0] = origin.projected[i][0]*focalLength;
+            origin_projection_1[i][1] = origin.projected[i][1]*focalLength;
         }
         
-        obj.setRotation(originAx, originAy, 0);
-        obj.project();
+        
+        origin.setRotation(originAx, originAy, 0);
+        origin.project();
         
         for (int i=0; i<origin_projection_2.length; i++)
         {
-            origin_projection_2[i][0] = obj.projected[i][0]*projectionScale;
-            origin_projection_2[i][1] = obj.projected[i][1]*projectionScale;
+            origin_projection_2[i][0] = origin.projected[i][0]*focalLength;
+            origin_projection_2[i][1] = origin.projected[i][1]*focalLength;
         }
         
+        origin.setRotation(0, 0, 0);
+        origin.setTranslation(0,0,originZTranslation - focalLength);
+        origin.project();
+
     }
     
     void processFeatures()
@@ -369,10 +377,11 @@ public class PlaceOfRealAction extends StereoTask {
         
         scene.add(rays1);
         scene.add(plane1);
-        scene.setTranslation(0, 0, 30);
+        scene.setTranslation(0, 0, 60);
         scene.add(outline1); 
         scene.add(ray2Subscene);
         scene.add(handle);
+        scene.add(origin);
         
         handle.vertex[0][2] = -focalLength;
         
@@ -505,7 +514,7 @@ public class PlaceOfRealAction extends StereoTask {
     {
         Reactor reactor = new Reactor();
 
-        RealAgent etalon = new RealAgent(PlaceOfRealAction.this);
+        RealAgent etalon = new RealAgent(SteroSolver.this);
 
         
         reactor.initPopulation( etalon, 70, mutationStrength*60, mutationStrength, 0.5);

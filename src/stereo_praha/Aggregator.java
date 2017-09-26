@@ -14,11 +14,12 @@ public class Aggregator {
     public double[] min;
     public double[] sum;
     public int count = 0;
+    public double[] avg;
 
-    public Aggregator(int count) {
-        max = new double[count];
-        min = new double[count];
-        sum = new double[count];
+    public Aggregator(int size) {
+        max = new double[size];
+        min = new double[size];
+        sum = new double[size];
         
         for (int i=0; i<max.length; i++) {
             max[i] = Double.NEGATIVE_INFINITY;
@@ -43,6 +44,15 @@ public class Aggregator {
            if (x[i] < min[i]) min[i] = x[i];            
         }
     }
+    
+    public double getAverage(int i)
+    {
+        if (avg == null){
+            avg = getAverage();
+        }
+        return avg[i];
+    }
+            
     
     public double[] getAverage()
     {

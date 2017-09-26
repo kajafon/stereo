@@ -11,6 +11,30 @@ package stereo_praha.gui;
  */
 public class SampleObject {
     
+    public static Object3D house()
+    {
+        double[][] orig_vertex = new double[][] {
+                  {-10,-10, 0},
+                  { 10,-10, 0},
+                  {-10, 10, 0},
+                  { 10, 10, 0},
+
+                  {-10,-10, +20},
+                  { 10,-10, +20},
+                  {-10, 10, +20},
+                  { 10, 10, +20},
+
+                  {20,5, +10}
+
+          };
+
+          int [][] orig_triangles = new int[][] {
+                  {0,1,2,0}, {2,1,3,2}, {4,5,6,4}, {5,6,7,5},
+                  {5,6,8,5}
+          };    
+            
+        return new Object3D(orig_vertex, orig_triangles);  
+    }
     
     public static Object3D hill()
     {

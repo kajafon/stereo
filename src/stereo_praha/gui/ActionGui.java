@@ -33,7 +33,7 @@ import stereo_praha.Algebra;
  */
 public class ActionGui {
     
-    PlaceOfRealAction solver;
+    SteroSolver solver;
     int activeObject = 0;
     Thread animationThread = null;
     JPanel gui;   
@@ -46,7 +46,7 @@ public class ActionGui {
 
     }
 
-    public ActionGui(PlaceOfRealAction solver) {
+    public ActionGui(SteroSolver solver) {
         this.solver = solver;
     }
     
@@ -395,7 +395,7 @@ public class ActionGui {
     
     public static void main(String[] args) {
         final JFrame frame = new JFrame("welcome back my friends...");
-        PlaceOfRealAction solver = new PlaceOfRealAction(SampleObject.platforms(25),  0.1, 0.15);
+        SteroSolver solver = new SteroSolver(SampleObject.house(),  0.1, 0.15);
         ActionGui gui = new ActionGui(solver);
         JPanel p = gui.getMainPanel(frame);
         
