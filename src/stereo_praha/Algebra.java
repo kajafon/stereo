@@ -5,6 +5,66 @@ import java.util.ArrayList;
 public class Algebra {
 
     
+    /*
+        intersection of a polygon and a line
+        polygon does not have to be flat
+        construction: find smallest distance between the ray [x,v] and poly-edge   
+        calc vector product 'result' of the ray and the edge. 
+        if the ray intersects with polygon, all scalar products of 'distances' and 'results' 
+        will be either greater or smaller than zero
+    */
+    public static boolean intersects(double[][] polyVertex, double[] x, double[] v)
+    {
+        double[] perpendi = new double[3];
+        double[] edge = new double[3];
+        double[] result = new double[3];
+        
+        double product = 0;
+        
+        for (int i=0; i<polyVertex.length; i++) {
+            
+            int j = i + 1;
+            if (j == polyVertex.length){
+                j = 0;
+            }
+            
+            Algebra.difference(polyVertex[j], polyVertex[i], edge);
+            final double[] distance = Algebra.linesDistanceSquare(edge, polyVertex[i], v, x);
+            
+            perpendi[0] = distance[4] - distance[1];
+            perpendi[1] = distance[5] - distance[2];
+            perpendi[2] = distance[6] - distance[3];
+            
+//            System.out.print("edge: "); Algebra.printVec(edge); System.out.println("");
+//            System.out.print("perpe: "); Algebra.printVec(perpendi); System.out.println("");            
+            
+            Algebra.vectorProduct(edge, v, result);
+            
+//            System.out.print("result: "); Algebra.printVec(result);System.out.println("");
+            
+            double scalar1 = Algebra.scalarValue(result, perpendi);
+            System.out.println("->" + scalar1 + "\n");
+            if (product == 0)
+            {               
+                product = scalar1;
+            } else if (product * scalar1 < 0){
+                return false;                
+            }          
+            
+        }
+        
+        return true;
+    }
+    
+    public static void testIntersection()
+    {
+        double[][] v = new double[][] {
+           {-1,-1,4}, {-1,1,4}, {1,1,4}, {1,-1,4}  
+        };
+        
+        System.out.println(":" + Algebra.intersects(v, new double[]{0.89,0.6,0.5}, new double[]{0.1, 0.2, 4}));
+    }
+    
     public static double[] anglesFromLine(double[] x1, double[] x2)
     {
         double[] v = new double[]{x2[0] - x1[0], x2[1] - x1[1], x2[2] - x1[2]};
@@ -158,6 +218,12 @@ public class Algebra {
 
         return m;
     }
+    
+    public static void printVec(double[] v) {
+        for (int i = 0; i < v.length; i++) {
+            System.out.print(v[i] + ", ");
+        }       
+    }
 
     public static void print(double[] m) {
         if (m.length > 3) {
@@ -172,14 +238,13 @@ public class Algebra {
 
     public static double[] difference(double[] v1, double[] v2, double[] dest)
     {
-        final double[] tmp = new double[v1.length];
-        for (int i=0; i<v1.length; i++)
-            tmp[i] = v1[i] - v2[i];
+        if (dest == null) { 
+            dest = new double[v1.length];
+        }
+        for (int i=0; i<v1.length; i++){
+            dest[i] = v1[i] - v2[i];
+        }
         
-        if (dest == null)
-            return tmp;
-        
-        System.arraycopy(tmp, 0, dest, 0, tmp.length);
         return dest;
     }
     
@@ -194,18 +259,23 @@ public class Algebra {
         return Math.sqrt(s);
     }
     
-    public static double scalarValue(double[] v1, double[] v2, double[] v3) {
-        double a1 = v2[0] - v1[0];
-        double a2 = v2[1] - v1[1];
-        double b1 = v3[0] - v1[0];
-        double b2 = v3[1] - v1[1];
+    public static double scalarValue(double[] a, double[] b, double[] c) {
 
-        double res = a1 * b1 + a2 * b2;
+        double res = 0;
+        
+        for (int i=0; i<a.length; i++) {
+            res += (b[i]-a[i])*(c[i]-a[i]);
+        }
 
-        if (v1.length > 2) {
-            a1 = v2[2] - v1[2];
-            b1 = v3[2] - v1[2];
-            res += a1 * b1;
+        return res;
+    }
+
+    public static double scalarValue(double[] v1, double[] v2) {
+
+        double res = 0;
+        
+        for (int i=0; i<v1.length; i++) {
+            res += v1[i]*v2[i];
         }
 
         return res;
@@ -490,7 +560,7 @@ public class Algebra {
     }
 
     public static void main(String[] args) {
-        _anglesFromLineTest();
+        testIntersection();
     }
 
 }

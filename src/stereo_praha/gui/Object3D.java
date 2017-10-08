@@ -1,5 +1,6 @@
 package stereo_praha.gui;
 import java.awt.*;
+import java.util.ArrayList;
 
 /**
  * Created by Karol Presovsky on 11/1/14.
@@ -10,6 +11,19 @@ public class Object3D extends Something3D {
     public int[][] triangles;
 
     Color color = Color.GRAY;
+    
+    ArrayList<Object[]> lineColors = new ArrayList<>();
+    
+    
+    public void addLineColors(int[][] indexes, Color c)
+    {
+        lineColors.add(new Object[]{indexes, c});
+    }
+    
+    public void clearLineColors()
+    {
+        lineColors.clear();
+    }
 
     public Object3D() {
     }
@@ -111,8 +125,14 @@ public class Object3D extends Something3D {
     {
         g.setColor(color);
         stuff3D.draw(g, scale, triangles, projected, shiftx, shifty);
+        
+        for(Object[] e: lineColors) {
+            g.setColor((Color)e[1]);
+            stuff3D.draw(g, scale, (int[][])e[0], projected, shiftx, shifty);            
+        }
           
     }
+    
 }
     
 

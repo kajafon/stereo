@@ -21,7 +21,7 @@ import stereo.ui.LinkPane;
 import stereo.ui.Manual;
 import stereo_praha.gui.GraphPanel;
 import stereo_praha.gui.PlaceOfAction_inspiration;
-import stereo_praha.gui.SteroSolver;
+import stereo_praha.gui.StereoSolver;
 
 /**
  *

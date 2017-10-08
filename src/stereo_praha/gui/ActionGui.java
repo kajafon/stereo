@@ -24,8 +24,10 @@ import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import stereo.ui.GuiUtils;
 import stereo_praha.AbstractReliever;
 import stereo_praha.Algebra;
+import stereo_praha.ProblemInterface;
 
 /**
  *
@@ -33,7 +35,7 @@ import stereo_praha.Algebra;
  */
 public class ActionGui {
     
-    SteroSolver solver;
+    StereoSolver solver;
     int activeObject = 0;
     Thread animationThread = null;
     JPanel gui;   
@@ -46,7 +48,7 @@ public class ActionGui {
 
     }
 
-    public ActionGui(SteroSolver solver) {
+    public ActionGui(StereoSolver solver) {
         this.solver = solver;
     }
     
@@ -211,7 +213,14 @@ public class ActionGui {
         panel.repaint();
     }
 
-    JPanel getGoldPanel(final JFrame frame)
+    boolean guiLive = true; 
+    
+    public void guiKilled()
+    {
+        guiLive = false;
+    }
+    
+    JPanel getGoldPanel()
     {
         if (goldPanel != null)
             return goldPanel;
@@ -245,40 +254,53 @@ public class ActionGui {
         goldPanel.setBackground(Color.red);
         
         final boolean[] animate = {true};
-        if (frame != null) {
-            new Thread(new Runnable(){
+        new Thread(new Runnable(){
 
-                @Override
-                public void run() {
-                    System.out.println("running animation");
-                    int safeCount = 30;
-                    while (!frame.isVisible()) 
-                    {
-                        try{
-                           Thread.sleep(1000);
-                        } catch(InterruptedException e){}   
-                        if (safeCount-- <= 0){
-                            break;
-                        }
-                    }
+            @Override
+            public void run() {
+                System.out.println("running animation");
 
-                    while (frame.isVisible()) 
-                    {
-                        solver.gold.rotate(0.04, 0.03, 0);
-                        solver.goldScene.project();
-                        goldPanel.repaint();
-                        try{
-                           Thread.sleep(50);
-                        } catch(InterruptedException e){}   
-                    }
-                    System.out.println("stopped animation");
+                while (guiLive) 
+                {
+                    solver.gold.rotate(0.04, 0.03, 0);
+                    solver.goldScene.project();
+                    goldPanel.repaint();
+                    try{
+                       Thread.sleep(50);
+                    } catch(InterruptedException e){}   
                 }
-            }).start();
-        }   
+                System.out.println("stopped animation");
+            }
+        }).start();
+        
         return goldPanel;
     }
+    FieldsOfError fieldsOfError;
+    StereoSolver.Adapter2d solve2d;
+    private JPanel getFieldsOfErrors()
+    {
+        solve2d = solver.getAdapter2d();
+        fieldsOfError = new FieldsOfError();
+        fieldsOfError.setLimits(-4, 4, 20);
+        fieldsOfError.setup_basic_error_graph(new ProblemInterface() {
+
+            @Override
+            public double[] calcError(double x, double y, double notUsed) {
+                solve2d.setVector(new double[]{x,y});
+                return new double[]{solver.goldError};
+            }
+        }, solver.moveX, solver.moveY, 0);
+        fieldsOfError.addMarkListener(new FieldsOfError.MarkListener() {
+            public void marked(double x, double y) {
+                System.out.println("marked: " + x + "," + y);
+                solve2d.setVector(new double[]{x,y});
+                panel.repaint();
+            }
+        });
+        return fieldsOfError.getPanel();        
+    }
     
-    public JPanel getMainPanel(JFrame frame)
+    public JPanel getMainPanel()
     {
         if (gui != null)
             return gui;
@@ -377,33 +399,26 @@ public class ActionGui {
         gui.setLayout(new BorderLayout());
         gui.add(panel, BorderLayout.WEST);
         gui.add(graphPanel, BorderLayout.SOUTH);
-        gui.add(getGoldPanel(frame), BorderLayout.CENTER);
-
-        
-//        frame = new JFrame("ta co neska?");
-//        frame.getContentPane().setLayout(new BorderLayout());
-//        frame.getContentPane().add();
-//        frame.setSize(300, 300);
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        frame.setVisible(true);
-        
+        gui.add(getFieldsOfErrors(), BorderLayout.CENTER);
         gui.setPreferredSize(new Dimension(1100,200));
         gui.setBorder(new LineBorder(Color.RED, 1));
         
         return gui;
     }
     
+    
+
     public static void main(String[] args) {
-        final JFrame frame = new JFrame("welcome back my friends...");
-        SteroSolver solver = new SteroSolver(SampleObject.house(),  0.1, 0.15);
-        ActionGui gui = new ActionGui(solver);
-        JPanel p = gui.getMainPanel(frame);
         
-        frame.getContentPane().setLayout(new BorderLayout());
-        frame.getContentPane().add(p, BorderLayout.CENTER);
-        frame.setSize(1100, 500);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
+        StereoSolver solver = new StereoSolver(SampleObject.house(),  0.1, 0.15);
+        ActionGui gui = new ActionGui(solver);
+        JPanel p = gui.getMainPanel();
+        
+        GuiUtils.frameIt(p, 1100, 500, new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                gui.guiKilled();                
+            }
+         });
 
     }
 

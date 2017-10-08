@@ -48,7 +48,7 @@ public class PlaceOfAction {
 
         graphPanel.addGraph(graph, "rotary");
         graphPanel.repaint();
-        fieldsOfError.transform();
+        fieldsOfError.project();
         fieldsOfError.getPanel().repaint();
     }
 

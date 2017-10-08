@@ -38,4 +38,14 @@ public class Scene3D extends Something3D {
         }        
     }
     
+    public void clear()
+    {
+        objects.clear();
+    }
+    
+    public boolean remove(Object3D o)
+    {
+        return objects.remove(o);
+    }
+    
 }

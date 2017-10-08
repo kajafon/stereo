@@ -24,6 +24,14 @@ public class stuff3D {
             projection[i][1] = dest[i][1]/z;
         }
     }
+    
+    public static double[] toProjectionSpace(int gx, int gy, int gWidth, int gHeight, double scale, int shiftx, int shifty) {
+        
+        int xoffs = (gWidth)/2 + shiftx;
+        int yoffs = (gHeight)/2 + shifty;            
+        
+        return new double[]{(gx - xoffs) / scale, (gy - yoffs) / scale};
+    }
 
     public static void draw(Graphics g, double scale, int [][] lines, double [][] vertex, int shiftx, int shifty) {
         Rectangle clipBounds = g.getClipBounds();

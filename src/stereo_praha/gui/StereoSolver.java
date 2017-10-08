@@ -21,7 +21,7 @@ import stereo.to3d.Face;
 import stereo.to3d.FtrLink;
 import static stereo_praha.gui.FieldsOfError.basicScale;
 
-public class SteroSolver extends StereoTask {
+public class StereoSolver extends StereoTask {
 
     double originAx = 0.4;
     double originAy = 0;
@@ -76,7 +76,7 @@ public class SteroSolver extends StereoTask {
     
     
     
-    public SteroSolver(Object3D obj, double ax, double ay)
+    public StereoSolver(Object3D obj, double ax, double ay)
     {
         origin = obj;
         originAx = ax;
@@ -85,7 +85,7 @@ public class SteroSolver extends StereoTask {
         init();
     }
     
-    public SteroSolver(ArrayList<FtrLink> links, ArrayList<Face> faces) {
+    public StereoSolver(ArrayList<FtrLink> links, ArrayList<Face> faces) {
 
         featureLinks = links;
         faceList = faces;
@@ -391,6 +391,8 @@ public class SteroSolver extends StereoTask {
         goldScene.setTranslation(0, 0, 60);
         
         System.out.println("..");
+        
+        cheat(); 
 
     }
     
@@ -514,7 +516,7 @@ public class SteroSolver extends StereoTask {
     {
         Reactor reactor = new Reactor();
 
-        RealAgent etalon = new RealAgent(SteroSolver.this);
+        RealAgent etalon = new RealAgent(StereoSolver.this);
 
         
         reactor.initPopulation( etalon, 70, mutationStrength*60, mutationStrength, 0.5);
@@ -534,13 +536,43 @@ public class SteroSolver extends StereoTask {
         System.out.println("    m:" + moveX + ", " + moveY + ", " + moveZ);
         System.out.println("    h:" + handle.vertex[0][0] + ", " + handle.vertex[0][1] + ", " + handle.vertex[0][2]);
     }
+    
+    public class Adapter2d {
+        StereoSolver solver;  
+        double[] handleRef;
+        
+        public Adapter2d(StereoSolver solver) {
+            this.solver = solver;
+            double[] vec = solver.getVector();
+            handleRef = new double[]{vec[3] - vec[0], vec[4] - vec[1]};    
+        }
 
+        public void setVector(double[] vec) {
+            double[] theVec = solver.getVector();
+            theVec[0] = vec[0];
+            theVec[1] = vec[1];
+            theVec[3] = vec[0] + handleRef[0];
+            theVec[4] = vec[1] + handleRef[1];
+            solver.setVector(theVec); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        public double[] getVector() {
+            double[] theVec = solver.getVector(); //To change body of generated methods, choose Tools | Templates.
+            return new double[]{theVec[0], theVec[1]};
+        }
+    }
+    
+    public Adapter2d getAdapter2d() {
+        return new Adapter2d(this);
+    }
+    
     public AbstractReliever getReliever() {
-        return new AbstractReliever(getVector(), 2) {
+        Adapter2d adapter = new Adapter2d(this);
+        return new AbstractReliever(adapter.getVector(), 2) {
             
             @Override
             public double getTension(double[] x) {
-                setVector(x);
+                adapter.setVector(x);
                 return goldError;                
             }
         };
