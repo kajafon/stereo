@@ -29,6 +29,18 @@ public abstract class Something3D {
 
     
     String name = "";
+
+    public double getAngleX() {
+        return angleX;
+    }
+
+    public double getAngleY() {
+        return angleY;
+    }
+
+    public double getAngleZ() {
+        return angleZ;
+    }
     
     public String getName() {
         return name;

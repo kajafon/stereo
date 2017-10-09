@@ -40,8 +40,8 @@ public class RidgeGui {
 
         RidgeGui gui = new RidgeGui();
 
-        FieldsOfError foe = new FieldsOfError();
-        foe.setup_basic_error_graph(gui.ridge, 0,0,0);
+        FieldsOfError foe = new FieldsOfError(gui.ridge);
+        foe.recalc(0,0);
 
         double[][] steps = gui.relax(new double[]{0.1, 1}, 0.1, 100, new double[]{0,0});
 

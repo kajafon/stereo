@@ -12,9 +12,13 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
 public class FieldsOfError {
+    
+    String name = " ----- ";
     public static final double basicScale = 500;
     double projectionScale = basicScale;
     int stepCount = 50;
+    double centerX = 0;
+    double centerY = 0;
     double low;
     double high;
     double step;
@@ -35,9 +39,6 @@ public class FieldsOfError {
     JPanel panel;
 
     ProblemInterface temporaryProblem;
-    double tmp_ax;
-    double tmp_ay;
-    double tmp_az;
     double angleY;
     double angleX;
     double errorMax = Double.MIN_VALUE;
@@ -49,8 +50,22 @@ public class FieldsOfError {
 
     public double minI=0;
     public double minJ=0;
+    
+    public Runnable buildListener;
 
-    public void setLimits(double low, double high, int stepCount) {
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+  
+    public ProblemInterface getTemporaryProblem() {
+        return temporaryProblem;
+    }
+ 
+    final public void setLimits(double low, double high, int stepCount) {
        this.low = low;
        this.high = high;
        this.stepCount = stepCount;
@@ -77,8 +92,9 @@ public class FieldsOfError {
         scene.clear();
     }
 
-    public FieldsOfError() {
-        setLimits(-0.42, 0.42, 50);
+    public FieldsOfError(ProblemInterface problem) {
+        temporaryProblem = problem;
+        setLimits(-0.42, 0.42, 50); // legacy from early specific use 
         setupPanel();
     }
 
@@ -86,28 +102,18 @@ public class FieldsOfError {
         return panel;
     }
 
-
-    interface ValueProducer {
-
-        double calc(ProblemInterface problem, double ax, double ay);
-
+    public void recalc(double x, double y){
+        centerX = x;
+        centerY = y;
+        recalc();
     }
-
-    public void setup_basic_error_graph(ProblemInterface problem, final double tax, final double tay, final double taz) {
-
-        temporaryProblem = problem;
-        tmp_ax = tax;
-        tmp_ay = tay;
-        tmp_az = taz;
-
-        buildGrid(problem, tax, tay, new ValueProducer() {
-            @Override
-            public double calc(ProblemInterface problem1, double ax, double ay) {
-                double[] e = problem1.calcError(ax, ay, taz);
-                System.out.println("fe:" + ax + ", " + ay + " -> " + e[0]);
-                return e[0];
-            }
-        });
+    
+    public void recalc(){      
+        buildGrid(); 
+        scene.project();
+        if (panel != null) {
+            panel.repaint();
+        }
     }
 
     public Object3D createPath(double[][] vertex, Color c) {
@@ -134,8 +140,8 @@ public class FieldsOfError {
 
     double[] normalizeXY(double[] vertex)
     {
-        vertex[0] = (vertex[0] + tmp_ax) / this.step;    
-        vertex[1] = (vertex[1] + tmp_ay) / this.step;
+        vertex[0] = vertex[0] / this.step;    
+        vertex[1] = vertex[1] / this.step;
         return vertex;
     } 
     
@@ -151,14 +157,7 @@ public class FieldsOfError {
         double factor = stepCount / (high - low);
 
         for (int i=0; i<o.vertex.length; i++) {
-            
             normalizeZ(o.vertex[i]);
-
-            if (!center) {
-                o.vertex[i][0] -= tmp_ax;
-                o.vertex[i][1] -= tmp_ay;
-            }
-
             o.vertex[i][0] *= factor;
             o.vertex[i][1] *= factor;
         }
@@ -195,7 +194,7 @@ public class FieldsOfError {
         createObject(vertex, lines, c);
     }
 
-    private void buildGrid(ProblemInterface problem, double tax, double tay, ValueProducer producer)
+    private void buildGrid()
     {
 
         ArrayList<int[]> _lines = new ArrayList<>();
@@ -223,12 +222,12 @@ public class FieldsOfError {
 
                 double _ax = ax;
                 double _ay = ay;
-                if (!center) {
-                    _ax += tax;
-                    _ay += tay;
+                double e = temporaryProblem.calcError(_ax - centerX, _ay - centerY, 0)[0];
+                
+                if (buildListener != null) {
+                    System.out.println(".");
+                    buildListener.run();
                 }
-
-                double e = producer.calc(problem, _ax, _ay);
 
                 vertexFOE[adr][0] = i - (stepCount/2);
                 vertexFOE[adr][1] = j - (stepCount/2);
@@ -329,7 +328,7 @@ public class FieldsOfError {
                 super.paintComponent(g);
 
                 g.setColor(Color.LIGHT_GRAY);
-                g.drawString("Field of error", 12, 12);
+                g.drawString("Field of error '" + name + "'", 12, 12);
 
                 g.setColor(Color.GRAY);
                 scene.draw(g, projectionScale, 0, 0);
@@ -363,20 +362,6 @@ public class FieldsOfError {
         panel.addMouseMotionListener(mt);
         panel.addMouseListener(mt);
 
-        JCheckBox centerBx = new JCheckBox(new AbstractAction("center") {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Object src = e.getSource();
-                if (src instanceof JCheckBox) {
-                    center = ((JCheckBox)src).isSelected();
-                    if (temporaryProblem != null) {
-                        setup_basic_error_graph(temporaryProblem, tmp_ax, tmp_ay, tmp_az);
-                        panel.repaint();
-                    }
-                }
-            }
-        });
-
         JSlider scaleSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, 1);
         scaleSlider.addChangeListener(new ChangeListener() {
             @Override
@@ -387,7 +372,6 @@ public class FieldsOfError {
             }
         });
 
-        panel.add(centerBx);
         panel.add(scaleSlider);
     }
 
@@ -397,8 +381,8 @@ public class FieldsOfError {
 
         problem.rotateTarget(0.1, 0.2, 0);
 
-        FieldsOfError foe = new FieldsOfError();
-        foe.setup_basic_error_graph(problem, 0, 0, 0);
+        FieldsOfError foe = new FieldsOfError(problem);
+        foe.recalc();
 
         return foe;
     }

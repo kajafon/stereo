@@ -7,19 +7,9 @@ import stereo_praha.*;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import javafx.scene.Scene;
-import javax.swing.border.LineBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import stereo.to3d.Face;
 import stereo.to3d.FtrLink;
-import static stereo_praha.gui.FieldsOfError.basicScale;
 
 public class StereoSolver extends StereoTask {
 
@@ -166,6 +156,10 @@ public class StereoSolver extends StereoTask {
     public double getError()
     {
         return goldError;
+    }
+    
+    public void project() {
+        scene.project();
     }
     
     @Override
@@ -537,11 +531,22 @@ public class StereoSolver extends StereoTask {
         System.out.println("    h:" + handle.vertex[0][0] + ", " + handle.vertex[0][1] + ", " + handle.vertex[0][2]);
     }
     
-    public class Adapter2d {
+    public interface Adapter2d {
+        public void setVector(double[] vec);
+        public double[] getVector();
+    }
+    
+    public class Adapter2d_xy implements Adapter2d, ProblemInterface {
         StereoSolver solver;  
         double[] handleRef;
+
+        @Override
+        public double[] calcError(double x, double y, double angelZ) {
+            setVector(new double[]{x, y});
+            return new double[]{solver.calcVectorError()};
+        }
         
-        public Adapter2d(StereoSolver solver) {
+        public Adapter2d_xy(StereoSolver solver) {
             this.solver = solver;
             double[] vec = solver.getVector();
             handleRef = new double[]{vec[3] - vec[0], vec[4] - vec[1]};    
@@ -562,12 +567,73 @@ public class StereoSolver extends StereoTask {
         }
     }
     
-    public Adapter2d getAdapter2d() {
-        return new Adapter2d(this);
+    public class Adapter2d_Angles implements Adapter2d, ProblemInterface{
+        StereoSolver solver;  
+        double[] handleRef;
+        Object3D angleObject;
+        
+        @Override
+        public double[] calcError(double x, double y, double angelZ) {
+            setVector(new double[]{x, y});
+            return new double[]{solver.calcVectorError()};
+        }
+
+        public Adapter2d_Angles(StereoSolver solver) {
+            this.solver = solver;
+            double[] vec = solver.getVector();
+            
+            Object3D gold = solver.getGold();
+            
+            Aggregator agr = new Aggregator(3);
+            for (double[] v:gold.vertex) {
+                agr.add(v);
+            }
+            
+            double[] pivot = agr.getAverage();
+            
+            angleObject = new Object3D(2,0,0);
+            angleObject.vertex[0][0] = vec[0] - pivot[0];
+            angleObject.vertex[0][1] = vec[1] - pivot[1];
+            angleObject.vertex[0][2] = vec[2] - pivot[2];
+            angleObject.vertex[1][0] = vec[3] - pivot[0];
+            angleObject.vertex[1][1] = vec[4] - pivot[1];
+            angleObject.vertex[1][2] = vec[5] - pivot[2];
+            angleObject.setTranslation(pivot[0], pivot[1], pivot[2]);
+            angleObject.project();            
+        }
+
+        public void setVector(double[] vec) {
+            angleObject.setRotation(vec[0], vec[1], 0);
+            angleObject.project();
+            double[] theVec = new double[6];
+            theVec[0] = angleObject.transformed[0][0];
+            theVec[1] = angleObject.transformed[0][1];
+            theVec[2] = angleObject.transformed[0][2];
+            theVec[3] = angleObject.transformed[1][0];
+            theVec[4] = angleObject.transformed[1][1];
+            theVec[5] = angleObject.transformed[1][2];
+            solver.setVector(theVec); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        public double[] getVector() {
+            return new double[]{angleObject.getAngleX(), angleObject.getAngleY()};
+        }
     }
     
-    public AbstractReliever getReliever() {
-        Adapter2d adapter = new Adapter2d(this);
+    public Adapter2d getAdapter2d(String what) {
+        if (what.equals("angles")) {
+            return new Adapter2d_Angles(this);
+        } 
+        
+        if (what.equals("xy")) {
+            return new Adapter2d_xy(this);
+        }
+        
+        return null;
+    }
+    
+    public AbstractReliever getReliever(String what) {
+        Adapter2d adapter = getAdapter2d(what);
         return new AbstractReliever(adapter.getVector(), 2) {
             
             @Override

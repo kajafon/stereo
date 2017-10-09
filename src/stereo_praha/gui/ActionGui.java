@@ -44,15 +44,12 @@ public class ActionGui {
     GraphPanel graphPanel = new GraphPanel();
 
     public void relax() {
-        AbstractReliever.relax_routine(solver.getReliever(), panel, graphPanel);
-
+        AbstractReliever.relax_routine(solver.getReliever("xy"), panel, graphPanel);
     }
 
     public ActionGui(StereoSolver solver) {
         this.solver = solver;
     }
-    
-    
     
     double xGuiToObject(double x)
     {
@@ -64,7 +61,6 @@ public class ActionGui {
         return (y - panel.getHeight()/2)/solver.scale;
     }    
 
-   
     MouseAdapter createMouseManipulator()
     {
         final MouseTracker sceneTracker = new MouseTracker();
@@ -162,12 +158,10 @@ public class ActionGui {
     }
 
     void reset() {
-
         panel.repaint();
         solver.moveX = 0;
         solver.moveY = 0;
         solver.moveZ = 0;
-
     }
     
     double[] handleInverse;
@@ -275,21 +269,19 @@ public class ActionGui {
         
         return goldPanel;
     }
-    FieldsOfError fieldsOfError;
+    
+    FieldsOfError fieldsOfError_pointer;
+    FieldsOfError fieldsOfError_xy;
+    FieldsOfError fieldsOfError_angles;
     StereoSolver.Adapter2d solve2d;
-    private JPanel getFieldsOfErrors()
+    
+    
+    private FieldsOfError buildFieldsOfErrors(String what)
     {
-        solve2d = solver.getAdapter2d();
-        fieldsOfError = new FieldsOfError();
-        fieldsOfError.setLimits(-4, 4, 20);
-        fieldsOfError.setup_basic_error_graph(new ProblemInterface() {
-
-            @Override
-            public double[] calcError(double x, double y, double notUsed) {
-                solve2d.setVector(new double[]{x,y});
-                return new double[]{solver.goldError};
-            }
-        }, solver.moveX, solver.moveY, 0);
+        solve2d = solver.getAdapter2d(what);
+        FieldsOfError fieldsOfError = new FieldsOfError((ProblemInterface)solve2d);
+        fieldsOfError.setName(what);
+        
         fieldsOfError.addMarkListener(new FieldsOfError.MarkListener() {
             public void marked(double x, double y) {
                 System.out.println("marked: " + x + "," + y);
@@ -297,7 +289,50 @@ public class ActionGui {
                 panel.repaint();
             }
         });
-        return fieldsOfError.getPanel();        
+        
+        if (what.equals("xy")){
+            fieldsOfError.setLimits(-4, 4, 20);
+        } else {
+            fieldsOfError.setLimits(-0.6, 0.6, 20);
+        }
+
+        recalcFieldsOfErrors(fieldsOfError);
+       
+        return fieldsOfError;        
+    }
+    
+    private void recalcFieldsOfErrors(FieldsOfError fieldsOfError){
+        StereoSolver.Adapter2d adapter = (StereoSolver.Adapter2d)fieldsOfError.getTemporaryProblem();
+        double[] vec = adapter.getVector();
+        fieldsOfError.recalc(vec[0], vec[1]);
+        adapter.setVector(vec);
+        if (panel != null) panel.repaint();
+    }
+    private void recalcFieldsOfErrors_threaded() {
+        if (fieldsOfError_pointer.buildListener == null) {
+            fieldsOfError_pointer.buildListener = new Runnable() {
+                @Override
+                public void run() {
+                    if (panel != null) {
+                        solver.project();
+                        Algebra.printVec(solver.getVector());
+                        panel.repaint();
+                        try {
+                            Thread.sleep(10);
+                        } catch(InterruptedException ex) {
+
+                        }    
+                    }
+                }
+            }; 
+        } 
+        
+        new Thread() {
+            @Override
+            public void run() {
+                recalcFieldsOfErrors(fieldsOfError_pointer);
+            }
+        }.start();
     }
     
     public JPanel getMainPanel()
@@ -341,6 +376,23 @@ public class ActionGui {
             }
         });
         
+        JButton switchFieldsOfErrorsButton = new JButton(new AbstractAction("!FE"){
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                gui.remove(fieldsOfError_pointer.getPanel());
+                if (fieldsOfError_pointer == fieldsOfError_angles) {
+                    fieldsOfError_pointer = fieldsOfError_xy;
+                } else {
+                    fieldsOfError_pointer = fieldsOfError_angles;
+                }
+                recalcFieldsOfErrors(fieldsOfError_pointer);
+                gui.add(fieldsOfError_pointer.getPanel(), BorderLayout.CENTER);
+                panel.invalidate();
+                panel.repaint();
+            }
+        });
+        
         JButton relaxButton = new JButton(new AbstractAction("r"){
 
             @Override
@@ -356,50 +408,64 @@ public class ActionGui {
                 animationThread.start();
             }
         });
-        JButton evolveButton = new JButton(new AbstractAction("e"){
+//        JButton evolveButton = new JButton(new AbstractAction("e"){
+//
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                animationThread = new Thread(new Runnable(){
+//                    @Override
+//                    public void run() {
+//                        solver.evolve(panel);
+//                        animationThread = null;
+//                        panel.repaint();
+//                    }
+//                });
+//                animationThread.start();
+//            }
+//        });
+        
+//        final JTextField mutationTf = new JTextField(5);
+//        mutationTf.addKeyListener(new KeyAdapter() {
+//            @Override
+//            public void keyReleased(KeyEvent ev) {
+//                if (mutationTf.getText().length() == 0)
+//                    return;
+//                try {
+//                    solver.mutationStrength = new Double(mutationTf.getText());
+//                    System.out.println("mutation:" + solver.mutationStrength);
+//                } catch(NumberFormatException e) 
+//                {
+//                    System.out.println("invalid double:" + mutationTf.getText());
+//                }    
+//            }
+//        });
+        
+        JButton recalcErrorsBtn = new JButton(new AbstractAction("recalc E"){
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                animationThread = new Thread(new Runnable(){
-                    @Override
-                    public void run() {
-                        solver.evolve(panel);
-                        animationThread = null;
-                        panel.repaint();
-                    }
-                });
-                animationThread.start();
+                recalcFieldsOfErrors_threaded();
             }
         });
         
-        final JTextField mutationTf = new JTextField(5);
-        mutationTf.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent ev) {
-                if (mutationTf.getText().length() == 0)
-                    return;
-                try {
-                    solver.mutationStrength = new Double(mutationTf.getText());
-                    System.out.println("mutation:" + solver.mutationStrength);
-                } catch(NumberFormatException e) 
-                {
-                    System.out.println("invalid double:" + mutationTf.getText());
-                }    
-            }
-        });
+        fieldsOfError_angles = buildFieldsOfErrors("angles");
+        fieldsOfError_xy = buildFieldsOfErrors("xy");
+        fieldsOfError_pointer = fieldsOfError_xy;
         
         panel.setFocusable(true);
         panel.add(scaleInput);
-        panel.add(mutationTf);
+//        panel.add(mutationTf);
         panel.add(cheatButton);
         panel.add(relaxButton);
-        panel.add(evolveButton);
+        panel.add(recalcErrorsBtn);        
+        panel.add(switchFieldsOfErrorsButton);        
+//        panel.add(evolveButton);
         
         gui = new JPanel();
         gui.setLayout(new BorderLayout());
         gui.add(panel, BorderLayout.WEST);
         gui.add(graphPanel, BorderLayout.SOUTH);
-        gui.add(getFieldsOfErrors(), BorderLayout.CENTER);
+        gui.add(fieldsOfError_pointer.getPanel(), BorderLayout.CENTER);
         gui.setPreferredSize(new Dimension(1100,200));
         gui.setBorder(new LineBorder(Color.RED, 1));
         

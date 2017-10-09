@@ -15,7 +15,7 @@ public class PlaceOfAction {
     double[] angles = new double[3];
     double[] anglesTest = new double[3];
 
-    final FieldsOfError fieldsOfError = new FieldsOfError();
+    final FieldsOfError fieldsOfError = new FieldsOfError(problem);
     final GraphPanel graphPanel = new GraphPanel();
     JPanel panel;
 
@@ -24,7 +24,7 @@ public class PlaceOfAction {
         problem.rotateTarget(angles[0], angles[1], angles[2]);
         panel.repaint();
 
-        fieldsOfError.setup_basic_error_graph(problem, angles[0], angles[1], angles[2]);
+        fieldsOfError.recalc(angles[0], angles[1]);
         graphPanel.clearGraphs();
         graphPanel.clearMarks();
 

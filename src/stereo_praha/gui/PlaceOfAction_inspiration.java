@@ -70,7 +70,7 @@ public class PlaceOfAction_inspiration extends StereoTask {
     JTextField tfAy = new JTextField(5);
     JTextField tfAx = new JTextField(5);
     
-    FieldsOfError fieldsOfError = new FieldsOfError();
+    FieldsOfError fieldsOfError;
     
 
     double unknownAngle = 0.2;
@@ -215,8 +215,8 @@ public class PlaceOfAction_inspiration extends StereoTask {
     }
     
     public void recalcFieldsOfError()
-    {
-        fieldsOfError.setup_basic_error_graph(new ProblemInterface() {
+    {   
+        fieldsOfError = new FieldsOfError(new ProblemInterface() {
 
             @Override
             public double[] calcError(double angelX, double angelY, double angelZ) {
@@ -225,7 +225,9 @@ public class PlaceOfAction_inspiration extends StereoTask {
                 buildTask();
                 return new double[]{reconstruction()};
             }
-        }, 0,0,0);
+        });
+        
+        fieldsOfError.recalc(0, 0);
                 
     }
             
