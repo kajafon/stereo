@@ -26,6 +26,42 @@ public abstract class AbstractReliever {
     double[][] track;
     
     double [][] errorToStepFnc;
+    
+    ArrayList<double[]> path = new ArrayList<>();
+    
+    boolean isQuitOnZip = false;
+    boolean isImproveZip = true;
+
+    public void setIsQuitOnZip(boolean isQuitOnZip) {
+        this.isQuitOnZip = isQuitOnZip;
+    }
+
+    public void setIsImproveZip(boolean isImproveZip) {
+        this.isImproveZip = isImproveZip;
+    }
+    
+    public void clearPath()
+    {
+        path.clear();
+    }
+    
+    public double[][] getPath()
+    {
+        double[][] out = new double[path.size()][];
+        for (int i=0; i<path.size(); i++) {
+            double[] entry = path.get(i);
+            out[i] = new double[entry.length];
+            System.arraycopy(entry, 0, out[i], 0, 3);
+        }
+        return out;
+    }
+    
+    public void addToPath(double e) {
+        double[] step = new double[x.length + 1];
+        System.arraycopy(x, 0, step, 0, x.length);
+        step[x.length] = e;
+        path.add(step);
+    }
 
     public double getVal() {
         return val;
@@ -43,15 +79,18 @@ public abstract class AbstractReliever {
 
     private void pushX()
     {
-        for (int i= track.length-2; i>=0; i--)
-        {
-            System.arraycopy(track[i],0, track[i+1],0, track[i].length);
+        if (!pushed) {
+            for (int i= track.length-2; i>=0; i--)
+            {
+                System.arraycopy(track[i],0, track[i+1],0, track[i].length);
+            }
+
+            System.arraycopy(x,0, track[0],0, x.length);
+            pushed = true;
         }
-
-        System.arraycopy(x,0, track[0],0, x.length);
-
     }
-
+    
+    boolean pushed;
     boolean zippDetected;
     
     public void halfStepSize()
@@ -61,11 +100,52 @@ public abstract class AbstractReliever {
 
     public boolean isZipp()
     {
+        pushX();
         return stepsCount > 4 &&
                Algebra.simpleDistance(track[0], track[1]) > Algebra.simpleDistance(track[0], track[2]) &&
                Algebra.simpleDistance(track[1], track[2]) > Algebra.simpleDistance(track[1], track[3]);
     }
     
+    private void improveZip() {
+        boolean zip = isZipp();
+        if (!zippDetected && zip)
+        {
+            zippDetected = zip;
+         //  System.out.println("zipp detected. " + stepsCount);
+        } else if (zippDetected && !zip)
+        {
+            zippDetected = zip;
+            //System.out.println("zipp lost" + stepsCount);
+        }
+
+        if (zip) {
+            double[] v1 = new double[x.length];
+            double[] v2 = new double[x.length];
+            double n1 = 0;
+            double n2 = 0;
+
+            for (int i=0; i<x.length; i++)
+            {
+                v1[i] = track[0][i] - track[2][i];
+                v2[i] = track[0][i] - track[1][i];
+
+                n1 += v1[i]*v1[i];
+                n2 += v2[i]*v2[i];
+            }
+
+            if (n1 < n2*0.7 && n1 > 0) {
+                n1 = Math.sqrt(n1);
+                n2 = Math.sqrt(n2);
+                n1 = n2/n1*0.7;
+                for (int i=0; i<x.length; i++)
+                {
+                    x[i] = track[2][i] + v1[i]*n1;
+                }
+            }
+
+        }
+    }
+
     public void setZipAverage()
     {
         Aggregator z = new Aggregator(x.length);
@@ -78,7 +158,6 @@ public abstract class AbstractReliever {
     public void setTarget(double[] target) {
         this.target = new double[target.length];
         System.arraycopy(target, 0, this.target, 0, target.length);
-
     }
 
     public void init(double[] x, double stepSize) {
@@ -155,7 +234,7 @@ public abstract class AbstractReliever {
 
     public double relax()
     {
-
+        pushed = false;
         double _stepSize = stepSize*Math.exp(-0.01*stepsCount);
         for (int i=0; i<x.length; i++)
             _tmp_x[i] = x[i];
@@ -206,7 +285,7 @@ public abstract class AbstractReliever {
         return val;
     }
     
-    public static void relax_routine(AbstractReliever reliever, JPanel panel, GraphPanel graphPanel)
+    public static AbstractReliever relax_routine(AbstractReliever reliever, JPanel panel, GraphPanel graphPanel)
     {
         ArrayList<Double> err_series = new ArrayList<>();
 
@@ -214,6 +293,7 @@ public abstract class AbstractReliever {
         
         graphPanel.clearGraphs();
         graphPanel.clearMarks();
+        reliever.clearPath();
 
         err_series.add(reliever.getTension());
         Aggregator agr_err = new Aggregator(1);
@@ -221,14 +301,24 @@ public abstract class AbstractReliever {
         for (i=0; i<50; i++) 
         {
             double error = reliever.relax();
+            reliever.addToPath(error);
+            
             agr_err.add(error);
 //            err_series.add(error);
             System.out.println("->" + error);
-            if (Double.isNaN(error))
-                return;
+            if (Double.isNaN(error)) {
+                break;
+            }
             panel.repaint();
             reliever.setStepSizeFromError(error);
             err_series.add(reliever.stepSize);
+            if (reliever.isQuitOnZip && reliever.isZipp()) {
+                System.out.println("reliever: zip detected. quitting.");
+                break;
+            }
+            if (reliever.isImproveZip) {
+                reliever.improveZip();
+            }
             
             try {
                 Thread.sleep(100);  
@@ -240,48 +330,8 @@ public abstract class AbstractReliever {
         
         panel.repaint();
         graphPanel.repaint();
-    }
-
-    private void improveZip() {
-        pushX();
-
-        boolean zip = isZipp();
-        if (!zippDetected && zip)
-        {
-            zippDetected = zip;
-         //  System.out.println("zipp detected. " + stepsCount);
-        } else if (zippDetected && !zip)
-        {
-            zippDetected = zip;
-            //System.out.println("zipp lost" + stepsCount);
-        }
-
-        if (zip) {
-            double[] v1 = new double[x.length];
-            double[] v2 = new double[x.length];
-            double n1 = 0;
-            double n2 = 0;
-
-            for (int i=0; i<x.length; i++)
-            {
-                v1[i] = track[0][i] - track[2][i];
-                v2[i] = track[0][i] - track[1][i];
-
-                n1 += v1[i]*v1[i];
-                n2 += v2[i]*v2[i];
-            }
-
-            if (n1 < n2*0.7 && n1 > 0) {
-                n1 = Math.sqrt(n1);
-                n2 = Math.sqrt(n2);
-                n1 = n2/n1*0.7;
-                for (int i=0; i<x.length; i++)
-                {
-                    x[i] = track[2][i] + v1[i]*n1;
-                }
-            }
-
-        }
+        
+        return reliever;
     }
 
     public double newton()

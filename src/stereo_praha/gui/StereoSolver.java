@@ -390,45 +390,46 @@ public class StereoSolver extends StereoTask {
 
     }
     
-    double calcVectorError()
-    {
-        vectorError = 0;
-        gold.setTranslation(0, 0, focalLength);
-        gold.setRotation(0, 0, 0);
-        gold.project();
-        if (gold_projection_1 == null) gold_projection_1 = new double[gold.projected.length][2];
-        for (int i=0; i<gold.projected.length; i++)
-        {
-            gold_projection_1[i][0] = gold.projected[i][0];
-            gold_projection_1[i][1] = gold.projected[i][1];
-            vectorError += Math.abs(gold_projection_1[i][0] - origin_projection_1[i][0]);
-            vectorError += Math.abs(gold_projection_1[i][1] - origin_projection_1[i][1]);
-        }
-
-        gold.setRotation(-angleX, -angleY, 0);
-        gold.setTranslation(moveX, moveY, moveZ + focalLength);
-        gold.project();
-        
-        if (gold_projection_2 == null) gold_projection_2 = new double[gold.projected.length][2];
-        for (int i=0; i<gold.projected.length; i++)
-        {
-            gold_projection_2[i][0] = gold.projected[i][0];
-            gold_projection_2[i][1] = gold.projected[i][1];
-            double e = Math.abs(gold_projection_2[i][0] - origin_projection_2[i][0]);
-            e += Math.abs(gold_projection_2[i][1] - origin_projection_2[i][1]);
-            
-            if (e == Double.NaN)
-            {
-                System.out.println("nan!!");
-            } else {
-                vectorError += e;
-            }
-        }
-        return vectorError;
-    }
-    
-    
-    double vectorError;
+//    double calcVectorError()
+//    {
+//        vectorError = 0;
+//        gold.setTranslation(0, 0, focalLength);
+//        gold.setRotation(0, 0, 0);
+//        gold.project();
+//        if (gold_projection_1 == null) gold_projection_1 = new double[gold.projected.length][2];
+//        for (int i=0; i<gold.projected.length; i++)
+//        {
+//            gold_projection_1[i][0] = gold.projected[i][0];
+//            gold_projection_1[i][1] = gold.projected[i][1];
+//            vectorError += Math.abs(gold_projection_1[i][0] - origin_projection_1[i][0]);
+//            vectorError += Math.abs(gold_projection_1[i][1] - origin_projection_1[i][1]);
+//        }
+//
+//        gold.setRotation(-angleX, -angleY, 0);
+//        gold.setTranslation(moveX, moveY, moveZ + focalLength);
+//        gold.project();
+//        
+//        if (gold_projection_2 == null) gold_projection_2 = new double[gold.projected.length][2];
+//        for (int i=0; i<gold.projected.length; i++)
+//        {
+//            gold_projection_2[i][0] = gold.projected[i][0];
+//            gold_projection_2[i][1] = gold.projected[i][1];
+//            double e = Math.abs(gold_projection_2[i][0] - origin_projection_2[i][0]);
+//            e += Math.abs(gold_projection_2[i][1] - origin_projection_2[i][1]);
+//            
+//            if (e == Double.NaN)
+//            {
+//                System.out.println("nan!!");
+//            } else {
+//                vectorError += e;
+//            }
+//        }
+//        System.out.println("");
+//        return vectorError;
+//    }
+//    
+//    
+//    double vectorError;
     double reconstruction()
     {
         if (gold == null)
@@ -543,7 +544,7 @@ public class StereoSolver extends StereoTask {
         @Override
         public double[] calcError(double x, double y, double angelZ) {
             setVector(new double[]{x, y});
-            return new double[]{solver.calcVectorError()};
+            return new double[]{solver.goldError};
         }
         
         public Adapter2d_xy(StereoSolver solver) {
@@ -575,7 +576,7 @@ public class StereoSolver extends StereoTask {
         @Override
         public double[] calcError(double x, double y, double angelZ) {
             setVector(new double[]{x, y});
-            return new double[]{solver.calcVectorError()};
+            return new double[]{solver.goldError};
         }
 
         public Adapter2d_Angles(StereoSolver solver) {

@@ -38,11 +38,9 @@ public class Object3D extends Something3D {
             vertex = new double[vertexNum][3];
             transformed = new double[vertexNum][3];
             projected = new double[vertexNum][2];
-            System.out.println("vertex init " + vertexNum);
         }
         if (triNum > 0 && (triangles == null || triangles.length != triNum)) {
             triangles = new int[triNum][faceVertices];
-            System.out.println("tringles init " + triNum);
         }
     }
     
@@ -52,7 +50,6 @@ public class Object3D extends Something3D {
 
         transformed = new double[vertex.length][];
         projected = new double[vertex.length][];
-
 
         /// init projected
         for (int i=0; i<vertex.length; i++) {

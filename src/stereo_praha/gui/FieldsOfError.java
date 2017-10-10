@@ -51,6 +51,12 @@ public class FieldsOfError {
     public double minI=0;
     public double minJ=0;
     
+    ArrayList<Object3D> paths = new ArrayList<>();
+    
+    public void clearPaths() {
+        paths.clear();
+    }
+    
     public Runnable buildListener;
 
     public String getName() {
@@ -75,6 +81,18 @@ public class FieldsOfError {
        this.vertexFOE = new double[gridWidth*gridWidth][3];
        this.errorScale = stepCount/5;
        scene.setTranslation(0,0, zShift);
+    }
+
+    public double getLow() {
+        return low;
+    }
+
+    public double getHigh() {
+        return high;
+    }
+
+    public double getStep() {
+        return step;
     }
     
     ArrayList<MarkListener> markListeners = new ArrayList<>();
@@ -117,18 +135,20 @@ public class FieldsOfError {
     }
 
     public Object3D createPath(double[][] vertex, Color c) {
+        double[][] vert = new double[vertex.length][];
+        for (int i = 0; i<vertex.length; i++) {
+            vert[i] = new double[3];
+            System.arraycopy(vertex[i], 0, vert[i], 0, 3);
+            normalizeXY(vert[i]);
+            normalizeZ(vert[i]);
+        }
         int[][] lines = new int[vertex.length-1][];
         for (int i=1; i<vertex.length; i++) {
             lines[i-1] = new int[]{i-1, i};
         }
-        Object3D o = createObject(vertex, lines, c);
+        Object3D o = createObject(vert, lines);
         o.setColor(c);
-        return o;
-    }
-
-    private Object3D createObject(double[][] vertex, int[][] triangles, Color c) {
-        Object3D o = createObject(vertex, triangles);
-        o.setColor(c);
+        paths.add(o);
         return o;
     }
 
@@ -191,7 +211,7 @@ public class FieldsOfError {
             {0,1},{0,2},{0,3}
         };
 
-        createObject(vertex, lines, c);
+        createObject(vertex, lines).setColor(c);
     }
 
     private void buildGrid()
@@ -225,7 +245,6 @@ public class FieldsOfError {
                 double e = temporaryProblem.calcError(_ax - centerX, _ay - centerY, 0)[0];
                 
                 if (buildListener != null) {
-                    System.out.println(".");
                     buildListener.run();
                 }
 
@@ -259,7 +278,7 @@ public class FieldsOfError {
         errorObject = createObject(vertexFOE, lines);
 
         addMark(0,0,0,Color.BLUE, stepCount);
-        System.out.println("-minax = " + minAx + ", minay = " + minAy);
+        System.out.println("FOE: minE = " + errorMin + ", maxE = " + errorMax + ", minx = " + minAx + ", miny = " + minAy);
     }
 
     public void project()

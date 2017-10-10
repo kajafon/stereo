@@ -44,7 +44,12 @@ public class ActionGui {
     GraphPanel graphPanel = new GraphPanel();
 
     public void relax() {
-        AbstractReliever.relax_routine(solver.getReliever("xy"), panel, graphPanel);
+        AbstractReliever reliever = solver.getReliever(fieldsOfError_pointer.getName());
+        reliever.setStepSize(fieldsOfError_pointer.getStep());
+        reliever.setIsQuitOnZip(true);
+        AbstractReliever.relax_routine(reliever, panel, graphPanel);
+        fieldsOfError_pointer.createPath(reliever.getPath(), Color.black);
+        panel.repaint();
     }
 
     public ActionGui(StereoSolver solver) {
@@ -238,7 +243,6 @@ public class ActionGui {
                 g.drawString("E:" + solver.goldError, 12, 12);
                 g.drawString("minz:" + solver.minimalZ, 12, 24);
                 g.drawString("penalty:" + solver.penalty, 12, 36);
-                g.drawString("vec E:" + solver.vectorError, 12, 48);
                 solver.goldScene.draw(g, 4*scale, 0, 0);
                 
             }
@@ -293,7 +297,7 @@ public class ActionGui {
         if (what.equals("xy")){
             fieldsOfError.setLimits(-4, 4, 20);
         } else {
-            fieldsOfError.setLimits(-0.6, 0.6, 20);
+            fieldsOfError.setLimits(-0.08, 0.08, 20);
         }
 
         recalcFieldsOfErrors(fieldsOfError);
@@ -315,7 +319,6 @@ public class ActionGui {
                 public void run() {
                     if (panel != null) {
                         solver.project();
-                        Algebra.printVec(solver.getVector());
                         panel.repaint();
                         try {
                             Thread.sleep(10);
@@ -388,7 +391,7 @@ public class ActionGui {
                 }
                 recalcFieldsOfErrors(fieldsOfError_pointer);
                 gui.add(fieldsOfError_pointer.getPanel(), BorderLayout.CENTER);
-                panel.invalidate();
+                panel.revalidate();
                 panel.repaint();
             }
         });
@@ -397,15 +400,15 @@ public class ActionGui {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                animationThread = new Thread(new Runnable(){
-                    @Override
-                    public void run() {
+//                animationThread = new Thread(new Runnable(){
+//                    @Override
+//                    public void run() {
                         relax();
-                        animationThread = null;
-                        panel.repaint();
-                    }
-                });
-                animationThread.start();
+//                        animationThread = null;
+//                        panel.repaint();
+//                    }
+//                });
+//                animationThread.start();
             }
         });
 //        JButton evolveButton = new JButton(new AbstractAction("e"){
@@ -476,7 +479,7 @@ public class ActionGui {
 
     public static void main(String[] args) {
         
-        StereoSolver solver = new StereoSolver(SampleObject.house(),  0.1, 0.15);
+        StereoSolver solver = new StereoSolver(SampleObject.platforms(3),  0.1, 0.15);
         ActionGui gui = new ActionGui(solver);
         JPanel p = gui.getMainPanel();
         

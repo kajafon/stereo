@@ -35,24 +35,16 @@ public class Algebra {
             perpendi[1] = distance[5] - distance[2];
             perpendi[2] = distance[6] - distance[3];
             
-//            System.out.print("edge: "); Algebra.printVec(edge); System.out.println("");
-//            System.out.print("perpe: "); Algebra.printVec(perpendi); System.out.println("");            
-            
             Algebra.vectorProduct(edge, v, result);
             
-//            System.out.print("result: "); Algebra.printVec(result);System.out.println("");
-            
             double scalar1 = Algebra.scalarValue(result, perpendi);
-            System.out.println("->" + scalar1 + "\n");
             if (product == 0)
             {               
                 product = scalar1;
             } else if (product * scalar1 < 0){
                 return false;                
             }          
-            
         }
-        
         return true;
     }
     
