@@ -306,7 +306,7 @@ public class ActionGui {
         Algebra.printVecLn(vec);
         Algebra.printVecLn(solver.getVector());
 
-//        fieldsOfError.recalc(vec[0], vec[1]);
+        fieldsOfError.recalc(vec[0], vec[1]);
         adapter.setVector(vec);
         System.out.println("---");
         Algebra.printVecLn(vec);

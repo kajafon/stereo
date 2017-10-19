@@ -45,8 +45,8 @@ public class Object3D extends Something3D {
     }
     
     public Object3D(double[][] vertex, int[][] triangles) {
-       this(vertex, triangles, false);
-    }
+        this(vertex, triangles, false);
+    }  
     
     public Object3D(double[][] vertex, int[][] triangles, boolean copy) {
         
@@ -73,7 +73,7 @@ public class Object3D extends Something3D {
             }            
         }
         
-        if (triangles != null) {
+        if (triangles != null && copy) {
             for (int i=0; i<triangles.length; i++){
                 this.triangles[i] = new int[triangles[i].length];
                 System.arraycopy(triangles[i], 0, this.triangles[i], 0, triangles[i].length);
