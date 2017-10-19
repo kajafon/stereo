@@ -29,6 +29,11 @@ public abstract class Something3D {
 
     
     String name = "";
+    
+    public void setInverseMatrix(double[] m)
+    {
+        Algebra.calcInverse(m, matrix);
+    }
 
     public double getAngleX() {
         return angleX;

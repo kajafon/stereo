@@ -1,6 +1,7 @@
 package stereo_praha;
 
 import java.util.ArrayList;
+import stereo_praha.gui.Object3D;
 
 public class Algebra {
 
@@ -57,17 +58,21 @@ public class Algebra {
         System.out.println(":" + Algebra.intersects(v, new double[]{0.89,0.6,0.5}, new double[]{0.1, 0.2, 4}));
     }
     
-    public static double[] anglesFromLine(double[] x1, double[] x2)
+    public static double[] anglesFromVector(double[] v)
     {
-        double[] v = new double[]{x2[0] - x1[0], x2[1] - x1[1], x2[2] - x1[2]};
-        
-        
         double cosXZ = v[1] / Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
         
         double angleY = Math.acos(cosXZ);
         double angleX = Math.PI - Math.atan2(v[0], v[2]);
         
         return new double[]{angleY, angleX};
+    }
+    
+    public static double[] anglesFromLine(double[] x1, double[] x2)
+    {
+        double[] v = new double[]{x2[0] - x1[0], x2[1] - x1[1], x2[2] - x1[2]};
+    
+        return anglesFromVector(v);
     }
     
     public static void _anglesFromLineTest()
@@ -165,10 +170,15 @@ public class Algebra {
 
     }
 
-    public static void scale(double[] m, double s) {
-        for (int i = 0; i < 12; i++) {
-            m[i] *= s;
+    public static double[] scale(double[] m, double s) {
+        return scale(m, s, m);
+    }
+    
+    public static double[] scale(double[] m, double s, double[] res) {
+        for (int i = 0; i < m.length; i++) {
+            res[i] = m[i] * s;
         }
+        return res;
     }
 
     public static final int AXIS_X = 1;
@@ -216,6 +226,8 @@ public class Algebra {
         for (int i = 0; i < v.length; i++) {
             System.out.print(v[i] + ", ");
         }       
+        
+        System.out.print("(" + size(v) + ")");
     }
     
     public static void printVecLn(double[] v) {
@@ -241,6 +253,18 @@ public class Algebra {
         }
         for (int i=0; i<v1.length; i++){
             dest[i] = v1[i] - v2[i];
+        }
+        
+        return dest;
+    }
+
+    public static double[] combine(double[] v1, double[] v2, double[] dest)
+    {
+        if (dest == null) { 
+            dest = new double[v1.length];
+        }
+        for (int i=0; i<v1.length; i++){
+            dest[i] = v1[i] + v2[i];
         }
         
         return dest;
@@ -512,6 +536,117 @@ public class Algebra {
 
         return result;
     }
+    
+    public static double size(double[] x)
+    {
+        double out = 0;
+        for(double e : x) out += e*e;
+        return Math.sqrt(out);
+    }
+    
+    public static double[] duplicate(double[] v)
+    {
+        double[] out = new double[v.length];
+        System.arraycopy(v, 0, out, 0, v.length);
+        return out;
+    }
+    
+    /*
+    mass: mass center
+    hit: a place of impulse
+    impuls: impuls
+    
+    returns { translation gain of mass center, rotation momentum }
+      
+        leverage (L) = mass - hit
+        tangent(T) = compound of impulse[] perpendicular to leverage[]: source of rotational momentum
+      
+         I[] = T[] + w * L[]        
+         T . L = 0  -> tangent and leverage are perpendicular         
+        (I - w*L).L = 0
+                
+         (impuls.x - w * leverage.x) * leverage.x + 
+         (impuls.y - w * leverage.y) * leverage.y +
+         (impuls.z - w * leverage.z) * leverage.z == 0
+                 
+         impuls.x * leverage.x - w * (leverage.x)^2  +         
+         impuls.y * leverage.y - w * (leverage.y)^2  +         
+         impuls.z * leverage.z - w * (leverage.z)^2  == 0
+                 
+         w * scalarValue(leverage, leverage) = scalarValue(impuls, leverage)
+    
+    
+    */
+    public static double[][] calcImpact(double[] mass, double[] hit, double[] impuls)
+    {
+        double[] leverage = difference(mass, hit, null);
+        double leverage_size = size(leverage);
+        
+        if (leverage_size < 0.000001){
+            return new double[][]{duplicate(impuls),{0,0,0}};
+        }
+        
+        scale(leverage, 1.0/leverage_size);
+        
+        double w = scalarValue(impuls, leverage) / scalarValue(leverage, leverage);        
+        double[] T = duplicate(leverage); 
+        difference(impuls, scale(T, w), T);
+        
+        // momentum is perpendicular to L and T
+        double[] M = vectorProduct(T, leverage, null);
+        
+        // momentum size == T.size / leverage_size
+        scale(M, size(T)/size(M)/leverage_size, M);
+        
+        // translation of mass == leverage(size=1) * w
+        double[] translation = scale(leverage, w, new double[leverage.length]);
+        
+        return new double[][]{translation, M};         
+    }
+    
+    public static void _prnt(String name, double[][] vertex){
+        System.out.println(name + " :");
+        System.out.print("mass: "); printVecLn(vertex[0]);
+        System.out.print("hit: "); printVecLn(vertex[1]);
+        System.out.print("impulse: "); printVecLn(vertex[2]);
+        System.out.print("translation: "); printVecLn(vertex[3]);
+        System.out.print("rotation: "); printVecLn(vertex[4]);
+        System.out.println();
+
+    }
+    
+    public static void _impact_test()
+    {
+        Object3D obj = new Object3D(5,0,0);
+        obj.vertex[0] = new double[]{3,4,0};
+        obj.vertex[1] = new double[]{0,1,0.1}; 
+        obj.vertex[2] = new double[]{1,0,0.3};
+        
+        double[][] result1 = calcImpact(obj.vertex[0], obj.vertex[1], obj.vertex[2]);
+        obj.vertex[3] = result1[0];
+        obj.vertex[4] = result1[1];
+        
+        _prnt("1.)", obj.vertex);
+        
+        obj.setRotation(0.3, 0.12, 0.2);
+        obj.project();
+        
+        _prnt("2.)", obj.transformed);
+        
+        double[][] result2 = calcImpact(obj.transformed[0], obj.transformed[1], obj.transformed[2]);
+        obj.transformed[3] = result2[0];
+        obj.transformed[4] = result2[1];
+
+        _prnt("3.)", obj.transformed);
+        
+        Object3D obj2 = new Object3D(obj.transformed, null);
+        obj2.setInverseMatrix(obj.matrix);
+        
+        obj2.project();
+
+        _prnt("4.)", obj2.transformed);
+
+    }
 
     public static void _inverse_test() {
 
@@ -558,7 +693,7 @@ public class Algebra {
     }
 
     public static void main(String[] args) {
-        testIntersection();
+        _impact_test();
     }
 
 }
