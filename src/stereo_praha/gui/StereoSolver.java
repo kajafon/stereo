@@ -202,7 +202,7 @@ public class StereoSolver extends StereoTask {
         double[] x2 = handle.vertex[0];
         double[] a = Algebra.anglesFromLine(x1, x2);
         
-        angleX = Math.PI*1.5 + a[0];
+        angleX = a[0];
         angleY = a[1];
         
         focalLength = Algebra.distance(x1, x2);

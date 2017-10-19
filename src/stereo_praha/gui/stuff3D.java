@@ -85,12 +85,20 @@ public class stuff3D {
     public static void rotate(double[] m, double angelX, double angelY, double angelZ, double zPivot) {
         m[14] -= zPivot;
 
-        double[] r = Algebra.rotation(null, Algebra.AXIS_X, angelX);
-        Algebra.multiply_4x4(m, r, m);
-        Algebra.rotation(r, Algebra.AXIS_Y, angelY);
-        Algebra.multiply_4x4(m, r, m);
-        Algebra.rotation(r, Algebra.AXIS_Z, angelZ);
-        Algebra.multiply_4x4(m, r, m);
+        double[] r = new double[m.length];
+        
+        if (angelX != 0){
+            Algebra.rotation(r, Algebra.AXIS_X, angelX);
+            Algebra.multiply_4x4(m, r, m);
+        }        
+        if (angelY != 0) {
+            Algebra.rotation(r, Algebra.AXIS_Y, angelY);
+            Algebra.multiply_4x4(m, r, m);
+        }
+        if (angelZ != 0) {
+            Algebra.rotation(r, Algebra.AXIS_Z, angelZ);
+            Algebra.multiply_4x4(m, r, m);
+        }
 
         m[14] += zPivot;
     }

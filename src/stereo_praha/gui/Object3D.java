@@ -45,8 +45,20 @@ public class Object3D extends Something3D {
     }
     
     public Object3D(double[][] vertex, int[][] triangles) {
-        this.vertex = vertex;
-        this.triangles = triangles;
+       this(vertex, triangles, false);
+    }
+    
+    public Object3D(double[][] vertex, int[][] triangles, boolean copy) {
+        
+        if (copy) {
+            this.vertex = new double[vertex.length][];
+            if (triangles != null) {
+                this.triangles = new int[triangles.length][];
+            }
+        } else {
+            this.vertex = vertex;
+            this.triangles = triangles;
+        }
 
         transformed = new double[vertex.length][];
         projected = new double[vertex.length][];
@@ -55,9 +67,20 @@ public class Object3D extends Something3D {
         for (int i=0; i<vertex.length; i++) {
             projected[i] = new double[2];
             transformed[i] = new double[3];
+            if (this.vertex[i] == null) {
+                this.vertex[i] = new double[3];
+                System.arraycopy(vertex[i], 0, this.vertex[i], 0, this.vertex[i].length);
+            }            
         }
-
+        
+        if (triangles != null) {
+            for (int i=0; i<triangles.length; i++){
+                this.triangles[i] = new int[triangles[i].length];
+                System.arraycopy(triangles[i], 0, this.triangles[i], 0, triangles[i].length);
+            }
+        }
     }
+    
     
     public void add(double[][] vert, int[][] tria) {
         double[][] newVertex = new double[vertex.length + vert.length][3];

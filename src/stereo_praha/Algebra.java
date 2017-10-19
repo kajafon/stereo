@@ -2,6 +2,7 @@ package stereo_praha;
 
 import java.util.ArrayList;
 import stereo_praha.gui.Object3D;
+import stereo_praha.gui.stuff3D;
 
 public class Algebra {
 
@@ -60,12 +61,15 @@ public class Algebra {
     
     public static double[] anglesFromVector(double[] v)
     {
-        double cosXZ = v[1] / Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        double cosYZ = v[1] / Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
         
-        double angleY = Math.acos(cosXZ);
-        double angleX = Math.PI - Math.atan2(v[0], v[2]);
+        double angleX = Math.acos(cosYZ);
+        double angleY = Math.PI - Math.atan2(v[0], v[2]);
         
-        return new double[]{angleY, angleX};
+        angleX = Math.PI*1.5 + angleX;
+        angleY = angleY;
+
+        return new double[]{angleX, angleY};
     }
     
     public static double[] anglesFromLine(double[] x1, double[] x2)
@@ -80,7 +84,7 @@ public class Algebra {
         double[] m = Algebra.unity(null);
         double[] r = Algebra.rotation(null, Algebra.AXIS_X, 0.334);
         Algebra.multiply_4x4(m, r, m);
-        Algebra.rotation(r, Algebra.AXIS_Y, 0.223);
+        Algebra.rotation(r, Algebra.AXIS_Y, 0.123);
         Algebra.multiply_4x4(m, r, m);
         
         double[] x1 = new double[]{0,1,0};
@@ -94,6 +98,15 @@ public class Algebra {
         double[] res = Algebra.anglesFromLine(y1, y2);
         
         System.out.println("res: " + res[0] + ", " + res[1]);
+        System.out.println("------------");
+        
+        Algebra.rotation(r, Algebra.AXIS_Y, -0.223);
+        Algebra.multiply_4x4(r, m, m);
+        Algebra.rotation(r, Algebra.AXIS_X, -0.334);
+        Algebra.multiply_4x4(r, m, m);
+        
+        print(m);
+        
     }
     
     /*
@@ -237,9 +250,9 @@ public class Algebra {
 
     public static void print(double[] m) {
         if (m.length > 3) {
-            for (int j = 0; j < m.length; j++) {
+            for (int j = 0; j < m.length; j+=4) {
                 for (int i = 0; i < 4; i++) {
-                    System.out.print(m[j] + ", ");
+                    System.out.print(m[j+i] + ", ");
                 }
                 System.out.println();
             }
@@ -614,38 +627,95 @@ public class Algebra {
         System.out.println();
 
     }
+    /*
+       1.) find rotation from y axis to the position of rotation[] via anglesFromVector
+       2.) rotate around y axis (xz plane), size of rotation is |rotation|
+       3.) rotate back from y axis to original position 
+    */
+    public static void rotate3D(double[] matrix, double[] rotation)
+    {
+        double[] angles = anglesFromVector(rotation);
+        
+        // we have to rotate to align rotation vector with axis y
+        stuff3D.rotate(matrix, 0,          -angles[1],   0,             0);
+        stuff3D.rotate(matrix, -angles[0],          0,   0,             0);
+        // this is target rotation
+        stuff3D.rotate(matrix, 0,0,                     size(rotation), 0);
+        // lets rotate back
+        stuff3D.rotate(matrix, angles[0], angles[1], 0, 0);        
+    }
     
+    /*
+        part one
+        - have 3 vectors: mass center, place of a hit and a vector of a hit
+        - calculate impact result: (translation and rotation)
+        - rotate inputs and calculate rotated translation and impact
+        - rotate it back and it should be the same
+      
+        part two
+        - calculate rotation from impact and rotate the system
+        - calculate rotation from impact in second system and rotate that system
+        - rotate second system back to initial position -> system should be the same as first system
+       
+        print 5.) and 6.) should be as identical as possible 
+    */
     public static void _impact_test()
     {
         Object3D obj = new Object3D(5,0,0);
-        obj.vertex[0] = new double[]{3,4,0};
-        obj.vertex[1] = new double[]{0,1,0.1}; 
-        obj.vertex[2] = new double[]{1,0,0.3};
+        obj.vertex[0] = new double[]{3,4,0}; // mass center
+        obj.vertex[1] = new double[]{0,1,0.1}; // hit
+        obj.vertex[2] = new double[]{1,0,0.3}; // impulse
         
         double[][] result1 = calcImpact(obj.vertex[0], obj.vertex[1], obj.vertex[2]);
-        obj.vertex[3] = result1[0];
-        obj.vertex[4] = result1[1];
+        obj.vertex[3] = result1[0]; // velocity change
+        obj.vertex[4] = result1[1]; // rotation momentum
         
-        _prnt("1.)", obj.vertex);
+        _prnt("source:", obj.vertex);
         
         obj.setRotation(0.3, 0.12, 0.2);
         obj.project();
         
-        _prnt("2.)", obj.transformed);
+        _prnt("rotated source", obj.transformed);
         
         double[][] result2 = calcImpact(obj.transformed[0], obj.transformed[1], obj.transformed[2]);
         obj.transformed[3] = result2[0];
         obj.transformed[4] = result2[1];
 
-        _prnt("3.)", obj.transformed);
+        _prnt("rotated source, new impact", obj.transformed);
         
-        Object3D obj2 = new Object3D(obj.transformed, null);
-        obj2.setInverseMatrix(obj.matrix);
+        Object3D obj2 = new Object3D(obj.transformed, null, true);
         
+        double[] inversion = calcInverse(obj.matrix, null);
+        
+        obj2.matrix = duplicate(inversion);        
         obj2.project();
 
-        _prnt("4.)", obj2.transformed);
+        _prnt("obj2 rotated back", obj2.transformed);
+        
+        System.out.println("--------------------------");
+        
+        obj.clearTransforms();
+        obj2.clearTransforms();
 
+        rotate3D(obj.matrix, obj.vertex[4]);
+                
+        obj.project();
+        _prnt("5.)", obj.transformed);
+        
+        System.out.println("matrix of obj (should be unity):");
+        print(obj.matrix);
+        
+        rotate3D(obj2.matrix, obj2.vertex[4]);
+        
+        System.out.println("matrix of obj2 (should be unity):");
+        print(obj2.matrix);
+         
+       
+        obj2.matrix = multiply_4x4(obj2.matrix, inversion, null);
+        obj2.project();
+        
+        _prnt("6.)", obj2.transformed);
+        
     }
 
     public static void _inverse_test() {
@@ -693,6 +763,7 @@ public class Algebra {
     }
 
     public static void main(String[] args) {
+//        _anglesFromLineTest();
         _impact_test();
     }
 

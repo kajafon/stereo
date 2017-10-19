@@ -74,6 +74,17 @@ public abstract class Something3D {
         project_implemented(tmp_matrix);
         
     }
+    
+    public void clearTransforms()
+    {
+        this.angleX = 0;
+        this.angleY = 0;
+        this.angleZ = 0;
+        
+        setTranslation(0, 0, 0);
+        
+        Algebra.unity(matrix);
+    }
 
     public void setRotation(double angleX, double angleY, double angleZ) {
 
