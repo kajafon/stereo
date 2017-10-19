@@ -43,17 +43,15 @@ public class FieldsOfError {
     double angleX;
     double errorMax = Double.MIN_VALUE;
     double errorMin = Double.MAX_VALUE;
+    double errorRange = 1;
     double errorScale = 1;
 
-    public double minAx=0;
-    public double minAy=0;
-
-    public double minI=0;
-    public double minJ=0;
-    
     ArrayList<Object3D> paths = new ArrayList<>();
     
     public void clearPaths() {
+        for (Object3D p:paths) {
+            scene.remove(p);
+        }
         paths.clear();
     }
     
@@ -149,6 +147,7 @@ public class FieldsOfError {
         Object3D o = createObject(vert, lines);
         o.setColor(c);
         paths.add(o);
+        paths.add(addMark(vert[0][0], vert[0][1], vert[0][2], Color.red, 0.5));
         return o;
     }
 
@@ -168,7 +167,7 @@ public class FieldsOfError {
     double[] normalizeZ(double[] vertex)
     {
         vertex[2] -= errorMin;
-        vertex[2] /= errorMax;
+        vertex[2] /= errorRange;
         vertex[2] = vertex[2] * errorScale;
         return vertex;
     }
@@ -192,7 +191,7 @@ public class FieldsOfError {
         addMark(x,y,0,c,width);
     }
 
-    public void addMark(double x, double y, double z, Color c, double width) {
+    public Object3D addMark(double x, double y, double z, Color c, double width) {
         
         double[] spot = normalizeXY(new double[]{x,y,z});
         normalizeXY(spot);
@@ -211,7 +210,7 @@ public class FieldsOfError {
             {0,1},{0,2},{0,3}
         };
 
-        createObject(vertex, lines).setColor(c);
+        return createObject(vertex, lines).setColor(c);
     }
 
     private void buildGrid()
@@ -226,9 +225,9 @@ public class FieldsOfError {
         errorMax = Double.MIN_VALUE;
         errorMin = Double.MAX_VALUE;
 
-        for (double ay = low; ay < high; ay += step, j++) {
+        for (double ay = low + centerY; ay < high + centerY; ay += step, j++) {
             i = 0;
-            for (double ax = low; ax < high; ax += step, i++) {
+            for (double ax = low + centerX; ax < high + centerX; ax += step, i++) {
 
                 adr = j * gridWidth + i;
 
@@ -240,9 +239,7 @@ public class FieldsOfError {
                     _lines.add(new int[]{adr - 1, adr});
                 }
 
-                double _ax = ax;
-                double _ay = ay;
-                double e = temporaryProblem.calcError(_ax - centerX, _ay - centerY, 0)[0];
+                double e = temporaryProblem.calcError(ax, ay, 0)[0];
                 
                 if (buildListener != null) {
                     buildListener.run();
@@ -252,20 +249,14 @@ public class FieldsOfError {
                 vertexFOE[adr][1] = j - (stepCount/2);
                 vertexFOE[adr][2] = e;
 
-                if (e < errorMin && (Math.abs(_ax)+Math.abs(_ay) > 0.00001))
-                {
-                    errorMin = e;
-                    minAx = _ax;
-                    minAy = _ay;
-                    minI = vertexFOE[adr][0];
-                    minJ = vertexFOE[adr][1];
-                }
+                if (e < errorMin && (Math.abs(ax)+Math.abs(ay) > 0.00001)) errorMin = e;                
                 if (e > errorMax) errorMax = e;
                 //////
             }
         }
-
-        if (errorMax != 0) {
+        errorRange = errorMax - errorMin;
+        
+        if (errorRange != 0) {
             for (i = 0; i <= adr; i++) {
                 normalizeZ(vertexFOE[i]);                
             }
@@ -278,7 +269,7 @@ public class FieldsOfError {
         errorObject = createObject(vertexFOE, lines);
 
         addMark(0,0,0,Color.BLUE, stepCount);
-        System.out.println("FOE: minE = " + errorMin + ", maxE = " + errorMax + ", minx = " + minAx + ", miny = " + minAy);
+        System.out.println("FOE: minE = " + errorMin + ", maxE = " + errorMax);
     }
 
     public void project()

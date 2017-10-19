@@ -302,11 +302,9 @@ public abstract class AbstractReliever {
         {
             double error = reliever.relax();
             reliever.addToPath(error);
-            
             agr_err.add(error);
-//            err_series.add(error);
-            System.out.println("->" + error);
             if (Double.isNaN(error)) {
+                System.out.println("error is NaN. quitting");
                 break;
             }
             panel.repaint();
@@ -319,12 +317,7 @@ public abstract class AbstractReliever {
             if (reliever.isImproveZip) {
                 reliever.improveZip();
             }
-            
-            try {
-                Thread.sleep(100);  
-            } catch(InterruptedException ex){}
         }      
-        
         
         graphPanel.addGraph(err_series, "E");
         

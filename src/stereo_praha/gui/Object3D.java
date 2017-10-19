@@ -106,8 +106,9 @@ public class Object3D extends Something3D {
         return color;
     }
 
-    public void setColor(Color color) {
+    public Object3D setColor(Color color) {
         this.color = color;
+        return this;
     }
 
             

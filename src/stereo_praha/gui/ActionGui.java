@@ -162,13 +162,6 @@ public class ActionGui {
             goldPanel.repaint();
     }
 
-    void reset() {
-        panel.repaint();
-        solver.moveX = 0;
-        solver.moveY = 0;
-        solver.moveZ = 0;
-    }
-    
     double[] handleInverse;
     void drag(double ax, double ay)
     {
@@ -307,35 +300,43 @@ public class ActionGui {
     
     private void recalcFieldsOfErrors(FieldsOfError fieldsOfError){
         StereoSolver.Adapter2d adapter = (StereoSolver.Adapter2d)fieldsOfError.getTemporaryProblem();
+        adapter.updateFromSolver();
         double[] vec = adapter.getVector();
-        fieldsOfError.recalc(vec[0], vec[1]);
+        System.out.println("\n\n--- test");
+        Algebra.printVecLn(vec);
+        Algebra.printVecLn(solver.getVector());
+
+//        fieldsOfError.recalc(vec[0], vec[1]);
         adapter.setVector(vec);
+        System.out.println("---");
+        Algebra.printVecLn(vec);
+        Algebra.printVecLn(solver.getVector());
         if (panel != null) panel.repaint();
     }
     private void recalcFieldsOfErrors_threaded() {
-        if (fieldsOfError_pointer.buildListener == null) {
-            fieldsOfError_pointer.buildListener = new Runnable() {
-                @Override
-                public void run() {
-                    if (panel != null) {
-                        solver.project();
-                        panel.repaint();
-                        try {
-                            Thread.sleep(10);
-                        } catch(InterruptedException ex) {
-
-                        }    
-                    }
-                }
-            }; 
-        } 
-        
-        new Thread() {
-            @Override
-            public void run() {
+//        if (fieldsOfError_pointer.buildListener == null) {
+//            fieldsOfError_pointer.buildListener = new Runnable() {
+//                @Override
+//                public void run() {
+//                    if (panel != null) {
+//                        solver.project();
+//                        panel.repaint();
+//                        try {
+//                            Thread.sleep(10);
+//                        } catch(InterruptedException ex) {
+//
+//                        }    
+//                    }
+//                }
+//            }; 
+//        } 
+//        
+//        new Thread() {
+//            @Override
+//            public void run() {
                 recalcFieldsOfErrors(fieldsOfError_pointer);
-            }
-        }.start();
+//            }
+//        }.start();
     }
     
     public JPanel getMainPanel()

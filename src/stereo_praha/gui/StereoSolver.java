@@ -45,10 +45,6 @@ public class StereoSolver extends StereoTask {
     ArrayList<Object3D> links;
     ArrayList<Face> faceList;
 
-
-    JTextField tfAy = new JTextField(5);
-    JTextField tfAx = new JTextField(5);
-
     ArrayList<FtrLink> featureLinks;
     
     double unknownAngle = 0.2;
@@ -64,6 +60,23 @@ public class StereoSolver extends StereoTask {
     double mutationStrength = 0.5; 
     int test;
     
+//    ArrayList<Adapter2d> adapters = new ArrayList<>();
+//
+//    public boolean addAdapter(Adapter2d e) {
+//        return adapters.add(e);
+//    }
+//
+//    public boolean removeAdapter(Object o) {
+//        return adapters.remove(o);
+//    }
+//
+//    public void clearAdapter() {
+//        adapters.clear();
+//    }
+//    
+//    public void notifyAdapters() {
+//        for (Adapter2d a:adapters) a.updateFromSolver();
+//    }
     
     
     public StereoSolver(Object3D obj, double ax, double ay)
@@ -180,6 +193,7 @@ public class StereoSolver extends StereoTask {
         
         moveRays2();
         applyHandle();
+        
     }
     
     void applyHandle()
@@ -210,13 +224,12 @@ public class StereoSolver extends StereoTask {
         if (Double.isNaN(aa)) {
            System.out.println("nan!!!!");
         }
-        
-//        System.out.println(">>>" + aa + ", " + bb + " / " + a[0] + ", " + a[1]);
-        
+//        notifyAdapters();
     }
     
     void cheat()
     {
+        System.out.println("\n CHEATING \n");
         double originFromZero = originZTranslation - projectionScale;
          
         handle.vertex[0][0] = 0;
@@ -390,46 +403,6 @@ public class StereoSolver extends StereoTask {
 
     }
     
-//    double calcVectorError()
-//    {
-//        vectorError = 0;
-//        gold.setTranslation(0, 0, focalLength);
-//        gold.setRotation(0, 0, 0);
-//        gold.project();
-//        if (gold_projection_1 == null) gold_projection_1 = new double[gold.projected.length][2];
-//        for (int i=0; i<gold.projected.length; i++)
-//        {
-//            gold_projection_1[i][0] = gold.projected[i][0];
-//            gold_projection_1[i][1] = gold.projected[i][1];
-//            vectorError += Math.abs(gold_projection_1[i][0] - origin_projection_1[i][0]);
-//            vectorError += Math.abs(gold_projection_1[i][1] - origin_projection_1[i][1]);
-//        }
-//
-//        gold.setRotation(-angleX, -angleY, 0);
-//        gold.setTranslation(moveX, moveY, moveZ + focalLength);
-//        gold.project();
-//        
-//        if (gold_projection_2 == null) gold_projection_2 = new double[gold.projected.length][2];
-//        for (int i=0; i<gold.projected.length; i++)
-//        {
-//            gold_projection_2[i][0] = gold.projected[i][0];
-//            gold_projection_2[i][1] = gold.projected[i][1];
-//            double e = Math.abs(gold_projection_2[i][0] - origin_projection_2[i][0]);
-//            e += Math.abs(gold_projection_2[i][1] - origin_projection_2[i][1]);
-//            
-//            if (e == Double.NaN)
-//            {
-//                System.out.println("nan!!");
-//            } else {
-//                vectorError += e;
-//            }
-//        }
-//        System.out.println("");
-//        return vectorError;
-//    }
-//    
-//    
-//    double vectorError;
     double reconstruction()
     {
         if (gold == null)
@@ -491,16 +464,8 @@ public class StereoSolver extends StereoTask {
         {
             penalty = 1.0;
         }
-//        penalty = Math.exp(-minz + focalLength);
             
         error *= penalty;
-//        calcVectorError();
-//        if (vectorError == Double.NaN)
-//            return Double.POSITIVE_INFINITY;
-//        
-//        error *= Math.abs(vectorError);
-        
-        
         
         return error;
     }
@@ -535,11 +500,12 @@ public class StereoSolver extends StereoTask {
     public interface Adapter2d {
         public void setVector(double[] vec);
         public double[] getVector();
+        public void updateFromSolver();
     }
     
     public class Adapter2d_xy implements Adapter2d, ProblemInterface {
         StereoSolver solver;  
-        double[] handleRef;
+        double[] handleRef = new double[2];
 
         @Override
         public double[] calcError(double x, double y, double angelZ) {
@@ -549,8 +515,13 @@ public class StereoSolver extends StereoTask {
         
         public Adapter2d_xy(StereoSolver solver) {
             this.solver = solver;
+        }
+
+        @Override
+        public void updateFromSolver() {
             double[] vec = solver.getVector();
-            handleRef = new double[]{vec[3] - vec[0], vec[4] - vec[1]};    
+            handleRef[0] = vec[3] - vec[0];
+            handleRef[1] = vec[4] - vec[1];    
         }
 
         public void setVector(double[] vec) {
@@ -571,7 +542,7 @@ public class StereoSolver extends StereoTask {
     public class Adapter2d_Angles implements Adapter2d, ProblemInterface{
         StereoSolver solver;  
         double[] handleRef;
-        Object3D angleObject;
+        Object3D angleObject = new Object3D(2,0,0);
         
         @Override
         public double[] calcError(double x, double y, double angelZ) {
@@ -581,6 +552,10 @@ public class StereoSolver extends StereoTask {
 
         public Adapter2d_Angles(StereoSolver solver) {
             this.solver = solver;
+        }
+
+        @Override
+        public void updateFromSolver() {
             double[] vec = solver.getVector();
             
             Object3D gold = solver.getGold();
@@ -592,7 +567,6 @@ public class StereoSolver extends StereoTask {
             
             double[] pivot = agr.getAverage();
             
-            angleObject = new Object3D(2,0,0);
             angleObject.vertex[0][0] = vec[0] - pivot[0];
             angleObject.vertex[0][1] = vec[1] - pivot[1];
             angleObject.vertex[0][2] = vec[2] - pivot[2];
@@ -622,15 +596,21 @@ public class StereoSolver extends StereoTask {
     }
     
     public Adapter2d getAdapter2d(String what) {
+        Adapter2d adapter = null;
         if (what.equals("angles")) {
-            return new Adapter2d_Angles(this);
+            adapter = new Adapter2d_Angles(this);
         } 
         
         if (what.equals("xy")) {
-            return new Adapter2d_xy(this);
+            adapter = new Adapter2d_xy(this);
         }
         
-        return null;
+        if (adapter != null){
+//            addAdapter(adapter);
+            adapter.updateFromSolver();            
+        }
+        
+        return adapter;
     }
     
     public AbstractReliever getReliever(String what) {

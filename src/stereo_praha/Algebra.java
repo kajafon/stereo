@@ -212,9 +212,15 @@ public class Algebra {
     }
     
     public static void printVec(double[] v) {
+        System.out.print(v.length + "> ");
         for (int i = 0; i < v.length; i++) {
             System.out.print(v[i] + ", ");
         }       
+    }
+    
+    public static void printVecLn(double[] v) {
+        printVec(v);
+        System.out.println();
     }
 
     public static void print(double[] m) {
