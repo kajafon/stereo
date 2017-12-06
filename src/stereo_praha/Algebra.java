@@ -188,6 +188,10 @@ public class Algebra {
     }
     
     public static double[] scale(double[] m, double s, double[] res) {
+        if (res == null) {
+            res = new double[m.length];
+        }
+        
         for (int i = 0; i < m.length; i++) {
             res[i] = m[i] * s;
         }
@@ -241,6 +245,11 @@ public class Algebra {
         }       
         
         System.out.print("(" + size(v) + ")");
+    }
+    
+    public static void printVecLn(double[] v, String name) {
+        System.out.print(name + ":");
+        printVecLn(v);
     }
     
     public static void printVecLn(double[] v) {
@@ -359,6 +368,10 @@ public class Algebra {
         return sum / x1.length;
     }
 
+    /*
+      x * y = z
+      y * x = -z
+    */ 
     public static double[] vectorProduct(double[] v1, double[] v2, double[] res) {
         if (res == null) {
             res = new double[3];
@@ -564,6 +577,11 @@ public class Algebra {
         return out;
     }
     
+    public static double[] copy(double[] src, double[] dest) {
+        System.arraycopy(src, 0, dest, 0, src.length);
+        return dest;
+    }
+    
     /*
     mass: mass center
     hit: a place of impulse
@@ -615,6 +633,49 @@ public class Algebra {
         double[] translation = scale(leverage, w, new double[leverage.length]);
         
         return new double[][]{translation, M};         
+    }
+    
+    public static double[] projectToPlane(double[] plane, double[] x)
+    {
+        return projectToPlane(plane, null, x);
+    }
+    
+    public static double[] projectToPlane(double[] plane, double[] p, double[] x)
+    {
+       double t = - scalarValue(plane, x)/scalarValue(plane, plane);
+       double[] out = scale(plane, t, null);
+       combine(out, x, out);
+       if (p != null) combine(out, p, out);
+       return out;
+    }
+    
+    
+    /*
+     c is base
+     c = (x + y)      
+     a*a - x*x = b*b - y*y
+     a*a - x*x = b*b - (c-x)*(c-x)    
+     heigh*height = a*a - x*x 
+    */
+    public static double heightOfTriangle(double a, double b, double c)
+    {
+        if (Math.abs(c) < 0.0001)
+        {
+            return (a+b)/2;
+        }
+        double x = (a*a - b*b + c*c) / 2 / c;        
+        return  Math.sqrt(a*a - x*x);        
+    }
+    
+    static void testHeightOfTriangle()
+    {
+        double a = 5;
+        double b = 5;
+        double c = 0;
+        double h = heightOfTriangle(a, b, c);            
+        double ctrl = Math.sqrt(a*a - h*h) + Math.sqrt(b*b - h*h);
+        System.out.println("h:" + h + ", c: " + c + " / " + ctrl);
+
     }
     
     public static void _prnt(String name, double[][] vertex){
@@ -761,10 +822,25 @@ public class Algebra {
         }
 
     }
+    
+    public static void testVectorProduct()
+    {
+        double[] v1 = new double[]{0,2,0};
+        double[] v2 = new double[]{0.3,0.5,0};
+        double[] p = new double[]{0,0,0};
 
+        double[] v3 = projectToPlane(v1, v1, v2);
+        
+        printVecLn(v1);
+        printVecLn(v2);
+        printVecLn(v3);
+    }
+    
     public static void main(String[] args) {
 //        _anglesFromLineTest();
-        _impact_test();
+//        _impact_test();
+//        testHeightOfTriangle();
+//        testVectorProduct();
     }
 
 }

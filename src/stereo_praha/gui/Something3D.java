@@ -101,6 +101,10 @@ public abstract class Something3D {
         setRotation(angleX, angleY, angleZ);
     }
     
+    public void setTranslation(double[] v) {
+       Algebra.copy(v, translation);
+    }
+    
     public void setTranslation(double x, double y, double z) {
         translation[0] = x;
         translation[1] = y;

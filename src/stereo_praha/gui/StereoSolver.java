@@ -469,8 +469,55 @@ public class StereoSolver extends StereoTask {
         
         return error;
     }
+    
+    /*
+      apply on projected scene, need valid tmp_matrix of rays2 object
+    */
+    public void calcImpuls()
+    {
+        Aggregator ag = new Aggregator(3);
+        
+        for (double[] v : gold.vertex) ag.add(v);
+        
+        double[] massCenter = ag.getAverage();
+        double[] tmp = new double[3];
 
-
+        
+//        for(Object3D link : links) {
+//            impulse.add(link.vertex[0], Algebra.difference(link.vertex[1], link.vertex[0], tmp));
+//        } 
+//        
+//        double[] mtrx = Algebra.calcInverse(rays2.tmp_matrix, null);
+//        
+//        double[] invertedCenter = Algebra.multiply4_4x4(mtrx, massCenter, null);
+//        
+//        Algebra.unity(mtrx);
+//        mtrx[12] -= invertedCenter[0];
+//        mtrx[13] -= invertedCenter[1];
+//        mtrx[14] -= invertedCenter[2];
+//        
+//        double[] rotationVec = Algebra.duplicate(impulse.rotation);
+//        double[] translationVec = Algebra.duplicate(impulse.translation);
+//        Algebra.scale(rotationVec, 0.01, rotationVec);
+//        
+//        System.out.println("translation vec size:" + Algebra.size(rotationVec));
+//        System.out.println("rotation vec size:" + Algebra.size(rotationVec));
+//        
+//        Algebra.rotate3D(mtrx, rotationVec);
+//
+//        mtrx[12] += invertedCenter[0];
+//        mtrx[13] += invertedCenter[1];
+//        mtrx[14] += invertedCenter[2];        
+//        
+//        mtrx[12] += translationVec[0];
+//        mtrx[13] += translationVec[1];
+//        mtrx[14] += translationVec[2];
+//        
+//        Algebra.multiply_4x4(rays2.matrix, mtrx, rays2.matrix);
+//        
+//        scene.project();
+//        
+    }
     
     public void evolve(JPanel panel)
     {

@@ -379,6 +379,16 @@ public class ActionGui {
                 panel.repaint();
             }
         });
+
+        JButton impulseButton = new JButton(new AbstractAction("I!"){
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                solver.calcImpuls();
+                panel.repaint();
+            }
+        });
+        
         
         JButton switchFieldsOfErrorsButton = new JButton(new AbstractAction("!FE"){
 
@@ -460,6 +470,7 @@ public class ActionGui {
         panel.add(scaleInput);
 //        panel.add(mutationTf);
         panel.add(cheatButton);
+        panel.add(impulseButton);
         panel.add(relaxButton);
         panel.add(recalcErrorsBtn);        
         panel.add(switchFieldsOfErrorsButton);        
