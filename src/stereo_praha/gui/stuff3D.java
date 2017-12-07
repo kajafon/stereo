@@ -33,6 +33,8 @@ public class stuff3D {
         return new double[]{(gx - xoffs) / scale, (gy - yoffs) / scale};
     }
 
+    static Color[] colorList = new Color[]{Color.red, Color.blue, Color.yellow, Color.CYAN, Color.MAGENTA, Color.ORANGE, Color.white};
+    
     public static void draw(Graphics g, double scale, int [][] lines, double [][] vertex, int shiftx, int shifty) {
         Rectangle clipBounds = g.getClipBounds();
         int xoffs = (clipBounds.width)/2 + shiftx;
@@ -42,6 +44,7 @@ public class stuff3D {
         {
             for (int i=0; i<vertex.length; i++)
             {
+               g.setColor(colorList[i%colorList.length]);
                g.drawRect((int)(vertex[i][0]*scale + xoffs - 5), (int)(vertex[i][1]*scale + yoffs - 5), 10, 10);
             }
         } else 

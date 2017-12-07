@@ -7,9 +7,14 @@ package stereo_praha.gui;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.AbstractAction;
+import javax.swing.JButton;
 import javax.swing.JPanel;
 import stereo.ui.GuiUtils;
 import stereo_praha.Algebra;
@@ -21,76 +26,116 @@ import stereo_praha.Impulse;
  */
 public class ImpulseGui {
     
-    double[][] vertex = new double[][] {
-        { 5, 5,0}, 
-        {-5, 5,0},
-        {-5,-5,0}            
-    };
+//    double[][] vertex = SampleObject.platforms(count)new double[][] {
+//        { 5, 5,0}, 
+//        {-5, 5,0},
+//        {-5,-5,0}            
+//    };
     
-    double[][] pulls;
     int activeIndex = 0;
     JPanel panel = null;
     Scene3D scene = new Scene3D();
     Object3D object;
-    Object3D resultObject;
+    Object3D previewObject;
     Object3D impulses;
+    Object3D attractor;
+    
+    boolean switcher;
     
     final void updateImpulsesObj() {
-        for (int i=0; i<vertex.length; i++) {
-            Algebra.copy(object.vertex[i], impulses.vertex[i]);
-            Algebra.combine(impulses.vertex[i], pulls[i], impulses.vertex[i+vertex.length]);
+
+        for (int i=0; i<object.transformed.length; i++) {
+            Algebra.copy(object.transformed[i], impulses.vertex[i]);
+            Algebra.copy(attractor.transformed[i], impulses.vertex[i+object.transformed.length]);
         }        
     }
     
-    void applyImpulses() {
-        
+    Impulse calcResultImpulse()
+    {       
         Impulse impulse = new Impulse();
         
-        for (int i=0; i<vertex.length; i++) {
-            impulse.add(object.vertex[i], pulls[i]);
-            Algebra.copy(object.vertex[i], resultObject.vertex[i]); 
+        double[] tmp = new double[3];
+        for (int j=0; j<object.transformed.length; j++) {
+            int i = switcher ? j : object.transformed.length - 1 - j;             
+            Algebra.difference(attractor.transformed[i], object.transformed[i], tmp);
+            impulse.add(object.transformed[i], tmp);
         }                
         
-        resultObject.setTranslation(Algebra.scale(impulse.translation, 0.3, new double[3]));
-        Algebra.rotate3D(resultObject.matrix, impulse.rotation);
+        return impulse;        
+    }
+    
+    void calcPreview() {
         
-        
+        Impulse impulse = calcResultImpulse();
+
+        previewObject.setTranslation(Algebra.scale(impulse.translation, 0.3, new double[3]));
+        Algebra.rotate3D(previewObject.matrix, impulse.rotation);                
+    }
+    
+    void applyPulls()
+    {
+        object.project();
+        attractor.project();
+        Impulse impulse = calcResultImpulse();
+        double[] rotation = Algebra.scale(impulse.rotation, 0.1/object.vertex.length, null);
+        System.out.println("" + Algebra.size(rotation));
+        Algebra.rotate3D(object.matrix, rotation);            
+        updateImpulsesObj();        
     }
 
     public ImpulseGui() {
-        pulls = new double[vertex.length][];
-        int[][] lines = new int[vertex.length][];
-        int[][] impLines = new int[vertex.length][];
+        object = SampleObject.platforms(1);
+        attractor = SampleObject.platforms(1);
         
-        for (int i=0; i<vertex.length; i++) {
-            pulls[i] = new double[]{
-                Math.random() - 0.5,
-                Math.random() - 0.5,
-                Math.random() - 0.5,
-            };
-            
-            lines[i] = new int[]{i, (i+1 == vertex.length ? 0 : i+1)};
-            impLines[i] = new int[]{i, i + vertex.length};
+        for(double[] v : attractor.vertex){
+            Algebra.scale(v, 2);
         }
         
-        object = new Object3D(vertex, lines);
-        resultObject = new Object3D(vertex.length, lines.length, 2);
-        resultObject.triangles = lines;
-        resultObject.setColor(Color.yellow);
-        impulses = new Object3D(vertex.length * 2, vertex.length, 2);
-        impulses.triangles = impLines;
+        int[][] lines = new int[object.vertex.length][];
+        int[][] impLines = new int[object.vertex.length][];
         
-        updateImpulsesObj();
-        applyImpulses();
+//        double[] m = null;
+//        double[] tmp = new double[3];
+        
+        for (int i=0; i<object.vertex.length; i++) {
+            
+//            m = Algebra.unity(m);
+//            Algebra.scale(object.vertex[i], 0.05, tmp);
+//            tmp[1] = 0;
+//            tmp[0] = 0;
+//                   
+//            if (Algebra.size(tmp) > 0.00001) {
+//                Algebra.rotate3D(m, tmp);
+//            }
+//
+//            pulls[i] = new double[]{
+//                m[0],
+//                m[1],
+//                m[2],
+//            };
+            
+            lines[i] = new int[]{i, (i+1 == object.vertex.length ? 0 : i+1)};
+            impLines[i] = new int[]{i, i + object.vertex.length};
+        }
+        
+        previewObject = new Object3D(object.vertex, lines);
+        previewObject.setColor(Color.yellow);
+        impulses = new Object3D(object.vertex.length * 2, object.vertex.length, 2);
+        impulses.triangles = impLines;
+        impulses.setColor(Color.red);
+        
+        applyPulls();
         
         //////////////
         //   resultObject.setRotation(0.3, 0.2, 0.1);
         ////////////////
         
+        scene.add(attractor);
         scene.add(object);
         scene.add(impulses);
-        scene.add(resultObject);
-        scene.setTranslation(0, 0, 30);
+//        scene.add(previewObject);
+        scene.setTranslation(0, 0, 50);
+        
         scene.project();
     }
     
@@ -102,7 +147,8 @@ public class ImpulseGui {
                 @Override
                 protected void paintComponent(Graphics g) {
                     super.paintComponent(g); 
-                    scene.draw(g, 300, 0, 0);
+                    scene.draw(g, 300, 0, 0);                    
+                    stuff3D.draw(g, 300, null, object.projected, 0, 0);
                 }
             };
             
@@ -118,8 +164,69 @@ public class ImpulseGui {
             
             panel.addMouseListener(tracker);
             panel.addMouseMotionListener(tracker);
+            panel.add(new JButton(new AbstractAction("davaj het!") {                
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    applyPulls();
+                    scene.project();
+                    panel.repaint();
+                }
+            }));
+            panel.add(new JButton(new AbstractAction("A") {                
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (thread == null) {
+                        startRelaxation();
+                    } else {
+                        thread = null;
+                    }
+                }
+            }));
+            panel.add(new JButton(new AbstractAction("!") {                
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    Algebra.rotate3D(object.matrix, new double[]{
+                        Math.random()-0.5, Math.random()-0.5, Math.random()-0.5
+                    });
+                    
+                    applyPulls();
+                    scene.project();
+                    panel.repaint();
+                }
+            }));
+            panel.add(new JButton(new AbstractAction("><") {                
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    switcher = !switcher;                    
+                }
+            }));
+
         }
         return panel;
+    }
+    
+    Thread thread = null;
+    
+    void startRelaxation() {
+        thread = new Thread(new Runnable(){
+            @Override
+            public void run() {
+                while (thread != null) {
+                    applyPulls();
+                    scene.project();
+                    panel.repaint();
+
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(ImpulseGui.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+                
+                System.out.println("anim thread stopped");
+            }            
+        });
+        thread.start();
     }
     
     public static void main(String[] args) {

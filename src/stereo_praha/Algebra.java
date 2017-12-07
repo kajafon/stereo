@@ -360,6 +360,14 @@ public class Algebra {
         return result;
     }
 
+    public static double simpleNorm(double[] x1) {
+        double sum = 0;
+        for (int i = 0; i < x1.length; i++) {
+            sum += Math.abs(x1[i]);
+        }
+        return sum / x1.length;
+    }
+
     public static double simpleDistance(double[] x1, double[] x2) {
         double sum = 0;
         for (int i = 0; i < x1.length; i++) {
@@ -688,6 +696,17 @@ public class Algebra {
         System.out.println();
 
     }
+    
+    public static boolean isValid(double[] v)
+    {
+        for (int i=0;i<v.length;i++){
+            if (Double.isNaN(v[i])){
+                return false;
+            }
+        }
+        return true;
+    }
+    
     /*
        1.) find rotation from y axis to the position of rotation[] via anglesFromVector
        2.) rotate around y axis (xz plane), size of rotation is |rotation|
@@ -695,6 +714,11 @@ public class Algebra {
     */
     public static void rotate3D(double[] matrix, double[] rotation)
     {
+        
+        if (simpleNorm(rotation) < 0.000001){
+            return; 
+        }
+        
         double[] angles = anglesFromVector(rotation);
         
         // we have to rotate to align rotation vector with axis y

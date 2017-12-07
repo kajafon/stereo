@@ -76,6 +76,14 @@ public class Impulse {
         tangent1 = Algebra.projectToPlane(leverage, v1);
         tangent2 = Algebra.projectToPlane(leverage, v2);
         
+        if (!Algebra.isValid(tangent1)) {
+            System.out.println("!ta1");
+        }
+        if (!Algebra.isValid(tangent2)) {
+            System.out.println("!ta2");
+        }
+
+        
         translation1 = Algebra.difference(v1, tangent1, null);
         translation2 = Algebra.difference(v2, tangent2, null);
         translation3 = null;
@@ -105,15 +113,34 @@ public class Impulse {
             
         } else {
             translation3 = Algebra.combine(tangent1, tangent2, null);
-            new_rotation = Algebra.duplicate(translation3);
             
-            double[] flatTangent = Algebra.projectToPlane(new_rotation, tangent1);
             
-            Algebra.vectorProduct(flatTangent, leverage, new_rotation);
-            Algebra.scale(new_rotation, Algebra.size(flatTangent)/Algebra.size(new_rotation));
+            double[] flatTangent = Algebra.projectToPlane(translation3, tangent1);
+            if (!Algebra.isValid(flatTangent)) {
+                System.out.println("!f");
+            }
+            if (!Algebra.isValid(tangent1)) {
+                System.out.println("!1");
+            }
+            if (!Algebra.isValid(tangent2)) {
+                System.out.println("!2");
+            }
             
+            new_rotation = Algebra.vectorProduct(flatTangent, leverage, null);
+            double newRotationSize = Algebra.size(new_rotation);
+            
+            if (newRotationSize > 0.0000001) {
+                if (!Algebra.isValid(new_rotation)) {
+                    System.out.println("!3/2");
+                }
+                Algebra.scale(new_rotation, Algebra.size(flatTangent)/newRotationSize);
+                if (!Algebra.isValid(new_rotation)) {
+                    System.out.println("!3/2");
+                }
+            }
         }
         
+
         Algebra.combine(translation3, translation1, translation3);
         Algebra.combine(translation3, translation2, translation3);
         
