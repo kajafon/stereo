@@ -267,6 +267,10 @@ public class Algebra {
             }
         }
     }
+    
+    public static double rand(double mid, double dispersion) {
+        return dispersion*(Math.random()-0.5) + mid;
+    }
 
     public static double[] difference(double[] v1, double[] v2, double[] dest)
     {

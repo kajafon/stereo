@@ -38,7 +38,7 @@ public class SampleObject {
     
     public static Object3D hill()
     {
-        int gridSize = 9;
+        int gridSize = 30;
         double hillSize = 20;
         
         double[][] v = new double[gridSize*gridSize][3]; 

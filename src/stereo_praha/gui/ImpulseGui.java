@@ -53,13 +53,16 @@ public class ImpulseGui {
     Impulse calcResultImpulse()
     {       
         Impulse impulse = new Impulse();
+        impulse.init(object.transformed.length);
         
         double[] tmp = new double[3];
         for (int j=0; j<object.transformed.length; j++) {
             int i = switcher ? j : object.transformed.length - 1 - j;             
             Algebra.difference(attractor.transformed[i], object.transformed[i], tmp);
-            impulse.add(object.transformed[i], tmp);
-        }                
+            impulse.add2(object.transformed[i], tmp);
+        }         
+        
+        impulse.calc2();
         
         return impulse;        
     }
@@ -77,15 +80,29 @@ public class ImpulseGui {
         object.project();
         attractor.project();
         Impulse impulse = calcResultImpulse();
-        double[] rotation = Algebra.scale(impulse.rotation, 0.1/object.vertex.length, null);
-        System.out.println("" + Algebra.size(rotation));
-        Algebra.rotate3D(object.matrix, rotation);            
+        double[] rotation = new double[3];
+        Algebra.copy(impulse.rotation, rotation);
+        double rotationSize = Algebra.size(rotation);
+        
+        if (rotationSize > 0.00001) {
+            rotationSize = 0.0003/Math.pow(object.vertex.length, 1.42);
+            Algebra.scale(rotation, rotationSize);
+        }
+        System.out.println("" + rotationSize);
+        Algebra.rotate3D(object.matrix, rotation);  
+        
+        Algebra.combine(object.translation, impulse.translation, object.translation);
+        object.project();
+        attractor.project();
+        
         updateImpulsesObj();        
     }
 
     public ImpulseGui() {
-        object = SampleObject.platforms(1);
-        attractor = SampleObject.platforms(1);
+//        object = SampleObject.hill();
+//        attractor = SampleObject.hill();
+        object = SampleObject.platforms(2);
+        attractor = SampleObject.platforms(2);
         
         for(double[] v : attractor.vertex){
             Algebra.scale(v, 2);
@@ -186,8 +203,10 @@ public class ImpulseGui {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     Algebra.rotate3D(object.matrix, new double[]{
-                        Math.random()-0.5, Math.random()-0.5, Math.random()-0.5
+                        Algebra.rand(0, 3), Algebra.rand(0, 3), Algebra.rand(0, 3)
                     });
+                    
+                    object.setTranslation(new double[]{Algebra.rand(10, 20), Algebra.rand(10, 20), Algebra.rand(10, 20)});
                     
                     applyPulls();
                     scene.project();

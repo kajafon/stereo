@@ -35,6 +35,12 @@ public class Impulse {
     double [] _x2;
     double [] _v1;
     double [] _v2;
+    double [][] vertex;
+    double [][] pulls;
+    int vertexCount;
+    
+    Aggregator vertexSum;
+    Aggregator pullsSum;
 
         
     public void print()
@@ -56,11 +62,73 @@ public class Impulse {
     public Impulse() {
         
     }  
+    
     public Impulse(double[] x1, double[] v1) {
         Algebra.copy(x1, hit);
         Algebra.copy(v1, translation);
     }
     
+    public void init(int count) {
+        if (pulls == null || pulls.length != count){
+            pulls = new double[count][3];
+            vertex = new double[count][3];                
+        }
+        
+        vertexCount = 0;
+        vertexSum = new Aggregator(3);
+        pullsSum = new Aggregator(3);
+        
+    }
+    
+    public void add2(double[] x, double[] v){
+        Algebra.copy(x, vertex[vertexCount]);
+        Algebra.copy(v, pulls[vertexCount]);  
+        
+        vertexSum.add(x);
+        pullsSum.add(v);
+        
+        vertexCount++;
+        
+    }
+    
+    public void calc2()
+    {
+        hit = vertexSum.getAverage();
+        translation = pullsSum.getAverage();
+        
+        double[] leverage = new double[3];
+        double[] tangent = new double[3];
+        double[] newRotation = new double[3];
+        
+        rotation = new double[3];
+        
+        for (int i=0; i<vertexCount;i++) {
+            Algebra.difference(vertex[i], hit, leverage);
+            double leverageSize = Algebra.size(leverage);
+            if (leverageSize < 0.000001){
+                continue;
+            }
+            tangent = Algebra.projectToPlane(leverage, pulls[i]);
+            double tangentSize = Algebra.size(tangent);
+            if (tangentSize < 0.000001){
+                continue;
+            }
+            
+            Algebra.vectorProduct(leverage, tangent, newRotation);
+            double newRotationSize = Algebra.size(newRotation);
+            
+            if (newRotationSize < 0.000001) {
+                continue;
+            }
+            
+            Algebra.scale(newRotation, leverageSize);
+            
+            Algebra.combine(newRotation, rotation, rotation);
+
+        }
+        
+        
+    }
     
     public void add(double[] x2, double[] v2)            
     {
