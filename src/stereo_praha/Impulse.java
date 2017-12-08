@@ -24,17 +24,6 @@ public class Impulse {
     public double[] hit = new double[3];
     
     double[] leverage;
-    double[] tangent1;
-    double[] tangent2;
-
-    double[] translation1;
-    double[] translation2;
-    double[] translation3;
-    double[] _rotation;
-    double [] _x1;
-    double [] _x2;
-    double [] _v1;
-    double [] _v2;
     double [][] vertex;
     double [][] pulls;
     int vertexCount;
@@ -45,18 +34,9 @@ public class Impulse {
         
     public void print()
     {
-        Algebra.printVecLn(_x1, "x1");
-        Algebra.printVecLn(_x2, "x2");
-        Algebra.printVecLn(tangent1, "tangent1");
-        Algebra.printVecLn(tangent2, "tangent2");
-        Algebra.printVecLn(translation1, "translation1");
-        Algebra.printVecLn(translation2, "translation2");
-        System.out.println("--------------");
         Algebra.printVecLn(hit, "hit");
         Algebra.printVecLn(translation, "translation");
         Algebra.printVecLn(rotation, "rotation");
-
-        
     }
 
     public Impulse() {
@@ -80,7 +60,7 @@ public class Impulse {
         
     }
     
-    public void add2(double[] x, double[] v){
+    public void add(double[] x, double[] v){
         Algebra.copy(x, vertex[vertexCount]);
         Algebra.copy(v, pulls[vertexCount]);  
         
@@ -91,7 +71,7 @@ public class Impulse {
         
     }
     
-    public void calc2()
+    public void calc()
     {
         hit = vertexSum.getAverage();
         translation = pullsSum.getAverage();
@@ -114,6 +94,7 @@ public class Impulse {
                 continue;
             }
             
+            double angle = Math.atan2(tangentSize, leverageSize);
             Algebra.vectorProduct(leverage, tangent, newRotation);
             double newRotationSize = Algebra.size(newRotation);
             
@@ -121,133 +102,23 @@ public class Impulse {
                 continue;
             }
             
-            Algebra.scale(newRotation, leverageSize);
+            Algebra.scale(newRotation, angle/newRotationSize);
             
             Algebra.combine(newRotation, rotation, rotation);
 
         }
         
+        Algebra.scale(rotation, 0.9/vertexCount);
+        
+//        double rotationSize = Algebra.size(rotation);
+//        
+//        if (rotationSize > 0.00001) {
+//            rotationSize = 0.0003/Math.pow(vertexCount, 1.42);
+//            Algebra.scale(rotation, rotationSize);
+//        }
         
     }
     
-    public void add(double[] x2, double[] v2)            
-    {
-        double[] x1 = this.hit;
-        double[] v1 = this.translation;
-        
-        _x1 = x1;
-        _x2 = x2;
-        _v1 = v1;
-        _v2 = v2;
-        
-        leverage = Algebra.difference(x2, x1, null);
-        tangent1 = Algebra.projectToPlane(leverage, v1);
-        tangent2 = Algebra.projectToPlane(leverage, v2);
-        
-        if (!Algebra.isValid(tangent1)) {
-            System.out.println("!ta1");
-        }
-        if (!Algebra.isValid(tangent2)) {
-            System.out.println("!ta2");
-        }
-
-        
-        translation1 = Algebra.difference(v1, tangent1, null);
-        translation2 = Algebra.difference(v2, tangent2, null);
-        translation3 = null;
-        
-        double[] new_rotation = null;
-        
-        
-        
-        double tangent1Size = Algebra.size(tangent1);
-        double tangent2Size = Algebra.size(tangent2);
-        
-        if (tangent1Size + tangent2Size < 0.0000001) {
-            Algebra.printVecLn(Algebra.combine(translation1, translation2, null),"result is translation: ");
-            return;
-        }
-        
-        double nonParalel = Algebra.size(Algebra.vectorProduct(tangent1, tangent2, null));
-        
-        if (nonParalel < 0.0000001) {
-            // tangents are parallel
-            
-            double[] mean = translation3 = Algebra.scale(Algebra.combine(tangent1, tangent2, null), 0.5);
-            Algebra.difference(tangent1, mean, tangent1);
-            
-            new_rotation = Algebra.vectorProduct(tangent1, leverage, null);
-            Algebra.scale(new_rotation, Algebra.size(tangent1)/Algebra.size(new_rotation)/Algebra.size(leverage));
-            
-        } else {
-            translation3 = Algebra.combine(tangent1, tangent2, null);
-            
-            
-            double[] flatTangent = Algebra.projectToPlane(translation3, tangent1);
-            if (!Algebra.isValid(flatTangent)) {
-                System.out.println("!f");
-            }
-            if (!Algebra.isValid(tangent1)) {
-                System.out.println("!1");
-            }
-            if (!Algebra.isValid(tangent2)) {
-                System.out.println("!2");
-            }
-            
-            new_rotation = Algebra.vectorProduct(flatTangent, leverage, null);
-            double newRotationSize = Algebra.size(new_rotation);
-            
-            if (newRotationSize > 0.0000001) {
-                if (!Algebra.isValid(new_rotation)) {
-                    System.out.println("!3/2");
-                }
-                Algebra.scale(new_rotation, Algebra.size(flatTangent)/newRotationSize);
-                if (!Algebra.isValid(new_rotation)) {
-                    System.out.println("!3/2");
-                }
-            }
-        }
-        
-
-        Algebra.combine(translation3, translation1, translation3);
-        Algebra.combine(translation3, translation2, translation3);
-        
-        Algebra.combine(translation3, translation, translation);
-        
-        Algebra.combine(hit, Algebra.scale(Algebra.combine(x1, x2, null), 0.5), hit);
-        Algebra.combine(rotation, new_rotation, rotation);
-        
-
-    }
-    
-    public static void impulseTest()
-    {
-        double[] x1 = new double[]{0,0,0};
-        double[] x2 = new double[]{1,0,0};
-        double[] x3 = new double[]{0.3,0.5,0};
-        double[] v1 = new double[]{-0.5,1,0.1};
-        double[] v2 = new double[]{0.5,-1,0.1};        
-        double[] v3 = new double[]{0.5,0.1,0};
-        
-        Impulse impulse = new Impulse(x1, v1);
-        impulse.add(x2, v2);
-        impulse.add(x3, v3);
-        
-        impulse.print();
-        
-        System.out.println("============================================================");
-        
-        impulse = new Impulse(x3, v3);
-        impulse.add(x1, v1);
-        impulse.add(x2, v2);
-        
-        impulse.print();        
-    }
-    
-    
-    public static void main(String[] args) {
-        impulseTest();
-    }
     
 
     

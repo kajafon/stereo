@@ -59,10 +59,10 @@ public class ImpulseGui {
         for (int j=0; j<object.transformed.length; j++) {
             int i = switcher ? j : object.transformed.length - 1 - j;             
             Algebra.difference(attractor.transformed[i], object.transformed[i], tmp);
-            impulse.add2(object.transformed[i], tmp);
+            impulse.add(object.transformed[i], tmp);
         }         
         
-        impulse.calc2();
+        impulse.calc();
         
         return impulse;        
     }
@@ -80,17 +80,7 @@ public class ImpulseGui {
         object.project();
         attractor.project();
         Impulse impulse = calcResultImpulse();
-        double[] rotation = new double[3];
-        Algebra.copy(impulse.rotation, rotation);
-        double rotationSize = Algebra.size(rotation);
-        
-        if (rotationSize > 0.00001) {
-            rotationSize = 0.0003/Math.pow(object.vertex.length, 1.42);
-            Algebra.scale(rotation, rotationSize);
-        }
-        System.out.println("" + rotationSize);
-        Algebra.rotate3D(object.matrix, rotation);  
-        
+        Algebra.rotate3D(object.matrix, impulse.rotation);          
         Algebra.combine(object.translation, impulse.translation, object.translation);
         object.project();
         attractor.project();
