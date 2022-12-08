@@ -48,7 +48,6 @@ public class NewStereoSolver extends StereoTask {
     double[][] gold_projection_2;
     
     int [][]   origin_triangles;
-    double[] goldMatrix = new double[16];
 
     double mutationStrength = 0.5; 
     int test;
@@ -239,6 +238,8 @@ public class NewStereoSolver extends StereoTask {
         plane1 = createPlane();
         plane2 = createPlane();
         
+        
+        
         plane1.setColor(Color.gray);
         plane2.setColor(Color.blue);
         
@@ -372,6 +373,27 @@ public class NewStereoSolver extends StereoTask {
         double error = agr_e.getAverage(0) / goldSize;
         
         return error;
+    }
+    
+    /** rotate ray2 scene randomly around local z axis */
+    public void roll() {
+        double[] pos = Algebra.getPositionBase(ray2Subscene.matrix, null);
+        double[] zet = Algebra.getZBase(ray2Subscene.matrix, null);
+        Algebra.scale(zet, Math.random() * 2 - 1);
+        Algebra.subtractFromPosition(ray2Subscene.matrix, pos);
+        Algebra.rotate3D(ray2Subscene.matrix, zet);
+        Algebra.addToPosition(ray2Subscene.matrix, pos);
+        scene.project();
+    }
+    
+    public void rotateGold(double a) {
+        double[] pos = Algebra.getPositionBase(gold.matrix, null);
+        double[] zet = Algebra.getYBase(gold.matrix, null);
+        Algebra.scale(zet, a);
+        Algebra.subtractFromPosition(gold.matrix, pos);
+        Algebra.rotate3D(gold.matrix, zet);
+        Algebra.addToPosition(gold.matrix, pos);
+        scene.project();
     }
 
     /** scales the impulse to weaken or strengthen its effect */

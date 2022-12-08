@@ -105,6 +105,30 @@ public class ExperimentGui {
         panel.repaint();
     }
     
+    Runnable runningSequence = null;
+    
+    void runSequence(Runnable runnable) {
+        runningSequence = new Runnable() {
+            @Override
+            public void run() {
+                for(int i=0; i<100 && runningSequence == this; i++) {
+                    runnable.run();
+                    panel.repaint();
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException ex) {                                
+                    }
+                }                
+                if (runningSequence == this) {
+                    runningSequence = null;
+                }
+                System.out.println("sequence finished");
+                panel.repaint();
+            }
+        };
+        new Thread(runningSequence).start();
+    }
+
     public JPanel getMainPanel()
     {
         if (gui != null)
@@ -115,6 +139,11 @@ public class ExperimentGui {
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 draw(g);
+                
+                if (runningSequence != null) {
+                    g.setColor(Color.red);
+                    g.fillRect(10,10, 30, 30);
+                }                
             }
         };
         
@@ -132,18 +161,43 @@ public class ExperimentGui {
                 panel.repaint();
             }
         });
+        JButton relaxXButton = new JButton(new AbstractAction("relax x"){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                runSequence(() -> {
+                    relax();
+                });            
+            }
+        });
+        JButton showGoldButton = new JButton(new AbstractAction("show gold"){
+            @Override
+            public void actionPerformed(ActionEvent e) {                
+                runSequence(() -> {
+                    solver.rotateGold(0.2);                
+                });
+            }
+        });
         JButton randomizeButton = new JButton(new AbstractAction("randomize"){
-
             @Override
             public void actionPerformed(ActionEvent e) {
                 solver.randomize();
                 panel.repaint();
             }
         });
-        
+        JButton rollButton = new JButton(new AbstractAction("roll"){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                solver.roll();
+                
+                panel.repaint();
+            }
+        });        
         panel.setFocusable(true);
         panel.add(relaxButton);
+        panel.add(relaxXButton);
         panel.add(randomizeButton);
+        panel.add(rollButton);
+        panel.add(showGoldButton);
         
         gui = new JPanel();
         gui.setLayout(new BorderLayout());
@@ -154,6 +208,7 @@ public class ExperimentGui {
         return gui;
     }
 
+    
     public static void main(String[] args) {
         
         NewStereoSolver solver = new NewStereoSolver(SampleObject.platforms(3),  0.1, 0.15);

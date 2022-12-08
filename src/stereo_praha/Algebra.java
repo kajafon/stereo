@@ -180,7 +180,41 @@ public class Algebra {
         v2[2] = v1[0] * m[2] + v1[1] * m[6] + v1[2] * m[10] + m[14];
 
         return v2;
+    }
+    
+    public static double[] getZBase(double[] matrix, double[] target) {
+        if (target == null) {
+            target = new double[3];
+        }
+        
+        target[0] = matrix[8];
+        target[1] = matrix[9];
+        target[2] = matrix[10];
+        
+        return target;
+    }
+    public static double[] getYBase(double[] matrix, double[] target) {
+        if (target == null) {
+            target = new double[3];
+        }
+        
+        target[0] = matrix[4];
+        target[1] = matrix[5];
+        target[2] = matrix[6];
+        
+        return target;
+    }
 
+    public static double[] getPositionBase(double[] matrix, double[] target) {
+        if (target == null) {
+            target = new double[3];
+        }
+        
+        target[0] = matrix[12];
+        target[1] = matrix[13];
+        target[2] = matrix[14];
+        
+        return target;
     }
 
     public static double[] scale(double[] m, double s) {

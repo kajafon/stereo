@@ -1,6 +1,7 @@
 package stereo_praha.gui;
 import java.awt.*;
 import java.util.ArrayList;
+import stereo_praha.Algebra;
 
 /**
  * Created by Karol Presovsky on 11/1/14.
@@ -42,6 +43,8 @@ public class Object3D extends Something3D {
         if (triNum > 0 && (triangles == null || triangles.length != triNum)) {
             triangles = new int[triNum][faceVertices];
         }
+        
+        Algebra.unity(matrix);
     }
     
     public Object3D(double[][] vertex, int[][] triangles) {
