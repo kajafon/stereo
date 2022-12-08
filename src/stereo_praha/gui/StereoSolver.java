@@ -144,7 +144,7 @@ public class StereoSolver extends StereoTask {
         rays1.project();
         ray2Subscene.project();
         
-        final ArrayList<Object3D> newLinks = SpringInspiration.createDistanceObjects(rays1, rays2, links);
+        final ArrayList<Object3D> newLinks = SpringInspiration.calcDistanceObjects(rays1, rays2, links);
         if (links == null) 
         {
             for(Object3D obj: newLinks) 
@@ -443,7 +443,7 @@ public class StereoSolver extends StereoTask {
             
         }
         
-        double[] av = agr.getAverage();
+        double[] av = agr.getAverage(null);
         gold.setTranslation(-av[0], -av[1], -av[2] + 60);
         
         minimalZ = agr.min[2];
@@ -453,7 +453,7 @@ public class StereoSolver extends StereoTask {
         if ( goldSize < 0.000001)
             return Double.POSITIVE_INFINITY;
         
-        double error = agr_e.getAverage()[0] / goldSize;
+        double error = agr_e.getAverage(0) / goldSize;
 
         
         if (minimalZ < -focalLength/2)
@@ -479,44 +479,45 @@ public class StereoSolver extends StereoTask {
         
         for (double[] v : gold.vertex) ag.add(v);
         
-        double[] massCenter = ag.getAverage();
+        double[] globalMassCentre = ag.getAverage(null);
         double[] tmp = new double[3];
 
+        Impulse impulse = new Impulse();
         
-//        for(Object3D link : links) {
-//            impulse.add(link.vertex[0], Algebra.difference(link.vertex[1], link.vertex[0], tmp));
-//        } 
-//        
-//        double[] mtrx = Algebra.calcInverse(rays2.tmp_matrix, null);
-//        
-//        double[] invertedCenter = Algebra.multiply4_4x4(mtrx, massCenter, null);
-//        
-//        Algebra.unity(mtrx);
-//        mtrx[12] -= invertedCenter[0];
-//        mtrx[13] -= invertedCenter[1];
-//        mtrx[14] -= invertedCenter[2];
-//        
-//        double[] rotationVec = Algebra.duplicate(impulse.rotation);
-//        double[] translationVec = Algebra.duplicate(impulse.translation);
-//        Algebra.scale(rotationVec, 0.01, rotationVec);
-//        
-//        System.out.println("translation vec size:" + Algebra.size(rotationVec));
-//        System.out.println("rotation vec size:" + Algebra.size(rotationVec));
-//        
-//        Algebra.rotate3D(mtrx, rotationVec);
-//
-//        mtrx[12] += invertedCenter[0];
-//        mtrx[13] += invertedCenter[1];
-//        mtrx[14] += invertedCenter[2];        
-//        
-//        mtrx[12] += translationVec[0];
-//        mtrx[13] += translationVec[1];
-//        mtrx[14] += translationVec[2];
-//        
-//        Algebra.multiply_4x4(rays2.matrix, mtrx, rays2.matrix);
-//        
-//        scene.project();
-//        
+        for(Object3D link : links) {
+            impulse.add(link.vertex[0], Algebra.difference(link.vertex[1], link.vertex[0], tmp));
+        } 
+        
+        double[] mtrx_global2local = Algebra.calcInverse(rays2.tmp_matrix, null);
+        
+        double[] localCenter = Algebra.multiply4_4x4(mtrx_global2local, globalMassCentre, null);
+        
+        Algebra.unity(mtrx_global2local);
+        mtrx_global2local[12] -= localCenter[0];
+        mtrx_global2local[13] -= localCenter[1];
+        mtrx_global2local[14] -= localCenter[2];
+        
+        double[] rotationVec = impulse.getRotation(null);
+        double[] translationVec = impulse.getTranslation(null);
+        Algebra.scale(rotationVec, 0.01, rotationVec);
+        
+        System.out.println("translation vec size:" + Algebra.size(rotationVec));
+        System.out.println("rotation vec size:" + Algebra.size(rotationVec));
+        
+        Algebra.rotate3D(mtrx_global2local, rotationVec);
+
+        mtrx_global2local[12] += localCenter[0];
+        mtrx_global2local[13] += localCenter[1];
+        mtrx_global2local[14] += localCenter[2];        
+        
+        mtrx_global2local[12] += translationVec[0];
+        mtrx_global2local[13] += translationVec[1];
+        mtrx_global2local[14] += translationVec[2];
+        
+        Algebra.multiply_4x4(rays2.matrix, mtrx_global2local, rays2.matrix);
+        
+        scene.project();
+        
     }
     
     public void evolve(JPanel panel)
@@ -612,7 +613,7 @@ public class StereoSolver extends StereoTask {
                 agr.add(v);
             }
             
-            double[] pivot = agr.getAverage();
+            double[] pivot = agr.getAverage(null);
             
             angleObject.vertex[0][0] = vec[0] - pivot[0];
             angleObject.vertex[0][1] = vec[1] - pivot[1];

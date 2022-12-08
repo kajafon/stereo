@@ -17,6 +17,9 @@ public abstract class Something3D {
     public double[][] transformed = null;
     public double[][] projected = null;
     public double[] matrix = Algebra.unity(null);
+    
+    /** after each projection this matrix contains transformation from local to global world       
+    */
     public double[] tmp_matrix = Algebra.unity(null);
     
     double angleX;
@@ -29,6 +32,11 @@ public abstract class Something3D {
 
     
     String name = "";
+
+    @Override
+    public String toString() {
+        return name;
+    }
     
     public void setInverseMatrix(double[] m)
     {

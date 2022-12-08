@@ -12,7 +12,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import javafx.scene.Scene;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import static stereo_praha.gui.FieldsOfError.basicScale;
@@ -183,7 +182,7 @@ public class PlaceOfAction_inspiration extends StereoTask {
         rays1.project();
         ray2Subscene.project();
         
-        final ArrayList<Object3D> newLinks = SpringInspiration.createDistanceObjects(rays1, rays2, links);
+        final ArrayList<Object3D> newLinks = SpringInspiration.calcDistanceObjects(rays1, rays2, links);
         if (links == null) 
         {
             for(Object3D obj: newLinks) 

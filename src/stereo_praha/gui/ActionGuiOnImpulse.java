@@ -337,8 +337,6 @@ public class ActionGuiOnImpulse {
         
         return gui;
     }
-    
-    
 
     public static void main(String[] args) {
         
@@ -350,9 +348,6 @@ public class ActionGuiOnImpulse {
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
                 gui.guiKilled();                
             }
-         });
-
+        });
     }
-
-
 }

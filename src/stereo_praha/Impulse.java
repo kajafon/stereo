@@ -19,22 +19,62 @@ import stereo_praha.gui.stuff3D;
  */
 public class Impulse {
     
-    public double[] translation = new double[3];
-    public double[] rotation = new double[3];
-    public double[] hit = new double[3];
+    double[] translation = new double[3];
+    double[] rotation = new double[3];
+    double[] hitSpot = new double[3];
     
     double[] leverage;
     double [][] vertex;
     double [][] pulls;
     int vertexCount;
     
-    Aggregator vertexSum;
-    Aggregator pullsSum;
+    Aggregator vertexSum = new Aggregator(3);
+    Aggregator pullsSum = new Aggregator(3);
 
+    boolean calculated = false;
+    
+    public double[] getRotation(double[] target) {        
+        if (!calculated) {
+            calc();
+        }
         
+        if (target == null) {
+            target = new double[rotation.length];        
+        }
+        
+        System.arraycopy(rotation, 0, target, 0, rotation.length);        
+        return target;        
+    }
+    
+    public double[] getTranslation(double[] target) {        
+        if (!calculated) {
+            calc();
+        }
+        
+        if (target == null) {
+            target = new double[translation.length];        
+        }
+        
+        System.arraycopy(translation, 0, target, 0, translation.length);        
+        return target;        
+    }
+    
+    public double[] getHitSpot(double[] target) {        
+        if (!calculated) {
+            calc();
+        }
+        
+        if (target == null) {
+            target = new double[translation.length];        
+        }
+        
+        System.arraycopy(hitSpot, 0, target, 0, hitSpot.length);        
+        return target;        
+    }        
+    
     public void print()
     {
-        Algebra.printVecLn(hit, "hit");
+        Algebra.printVecLn(hitSpot, "hit");
         Algebra.printVecLn(translation, "translation");
         Algebra.printVecLn(rotation, "rotation");
     }
@@ -44,37 +84,34 @@ public class Impulse {
     }  
     
     public Impulse(double[] x1, double[] v1) {
-        Algebra.copy(x1, hit);
+        Algebra.copy(x1, hitSpot);
         Algebra.copy(v1, translation);
     }
     
     public void init(int count) {
-        if (pulls == null || pulls.length != count){
-            pulls = new double[count][3];
-            vertex = new double[count][3];                
-        }
-        
-        vertexCount = 0;
-        vertexSum = new Aggregator(3);
-        pullsSum = new Aggregator(3);
-        
+        vertex = new double[count][3];
+        pulls = new double[count][3];
+    
+        vertexCount = 0;        
+        vertexSum.reset();
+        pullsSum.reset();        
     }
     
     public void add(double[] x, double[] v){
+        calculated = false;
         Algebra.copy(x, vertex[vertexCount]);
         Algebra.copy(v, pulls[vertexCount]);  
         
         vertexSum.add(x);
         pullsSum.add(v);
         
-        vertexCount++;
-        
+        vertexCount++;        
     }
     
     public void calc()
     {
-        hit = vertexSum.getAverage();
-        translation = pullsSum.getAverage();
+        hitSpot = vertexSum.getAverage(null);
+        translation = pullsSum.getAverage(null);
         
         double[] leverage = new double[3];
         double[] tangent = new double[3];
@@ -83,7 +120,7 @@ public class Impulse {
         rotation = new double[3];
         
         for (int i=0; i<vertexCount;i++) {
-            Algebra.difference(vertex[i], hit, leverage);
+            leverage = Algebra.difference(vertex[i], hitSpot, leverage);
             double leverageSize = Algebra.size(leverage);
             if (leverageSize < 0.000001){
                 continue;
@@ -102,24 +139,11 @@ public class Impulse {
                 continue;
             }
             
-            Algebra.scale(newRotation, angle/newRotationSize);
-            
-            Algebra.combine(newRotation, rotation, rotation);
-
+            Algebra.scale(newRotation, angle/newRotationSize);            
+            Algebra.add(newRotation, rotation, rotation);
         }
         
-        Algebra.scale(rotation, 0.9/vertexCount);
-        
-//        double rotationSize = Algebra.size(rotation);
-//        
-//        if (rotationSize > 0.00001) {
-//            rotationSize = 0.0003/Math.pow(vertexCount, 1.42);
-//            Algebra.scale(rotation, rotationSize);
-//        }
-        
+        Algebra.scale(rotation, 0.9/vertexCount);        
+        calculated = true;        
     }
-    
-    
-
-    
 }

@@ -44,7 +44,11 @@ public class SpringInspiration {
      * @param links list of links/objects between respective edges of objects
      * @return
      */
-    public static ArrayList<Object3D> createDistanceObjects(Object3D obj1, Object3D obj2, ArrayList<Object3D> links) {
+    public static ArrayList<Object3D> calcDistanceObjects(Object3D obj1, Object3D obj2, ArrayList<Object3D> links) {
+        return calcDistanceObjects(obj1, obj2, links, Color.yellow);
+    }
+    
+    public static ArrayList<Object3D> calcDistanceObjects(Object3D obj1, Object3D obj2, ArrayList<Object3D> links, Color color) {
         if (links == null) {
             links = new ArrayList<>();
         }
@@ -71,7 +75,7 @@ public class SpringInspiration {
             } else {
                 link = links.get(i);
             }
-            link.setColor(Color.yellow);
+            link.setColor(color);
 
             link.vertex[0][0] = res[1];
             link.vertex[0][1] = res[2];

@@ -3,3 +3,4 @@ _backups
 *.class
 
 /dist/
+/build/

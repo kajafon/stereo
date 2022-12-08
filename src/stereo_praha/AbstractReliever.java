@@ -152,7 +152,7 @@ public abstract class AbstractReliever {
         for (double[] v : track) {
             z.add(v);
         }        
-        x = z.getAverage();
+        x = z.getAverage(null);
     }
 
     public void setTarget(double[] target) {

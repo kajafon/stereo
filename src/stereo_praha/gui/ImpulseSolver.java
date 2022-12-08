@@ -342,12 +342,13 @@ public class ImpulseSolver {
     
     boolean relax(int k) {
         Impulse impulse = calcResultImpulse();
-        
-        Algebra.rotate3D(ray2Subscene.matrix, Algebra.scale(impulse.rotation, 4));  
+        double[] tmp = impulse.getRotation(null);
+        Algebra.rotate3D(ray2Subscene.matrix, Algebra.scale(tmp, 4, tmp));  
         
         if (k%20 == 0) {
             System.out.println("translation");
-            Algebra.combine(ray2Subscene.translation, impulse.translation, ray2Subscene.translation);
+            impulse.getTranslation(tmp);
+            Algebra.add(ray2Subscene.translation, tmp, ray2Subscene.translation);
         }
         
         
@@ -379,7 +380,7 @@ public class ImpulseSolver {
         rays1.project();
         ray2Subscene.project();
         
-        SpringInspiration.createDistanceObjects(rays1, rays2, links);
+        SpringInspiration.calcDistanceObjects(rays1, rays2, links);
         
         if (gold == null)
         {
@@ -419,7 +420,7 @@ public class ImpulseSolver {
             
         }
         
-        double[] av = agr.getAverage();
+        double[] av = agr.getAverage(null);
         gold.setTranslation(-av[0], -av[1], -av[2] + 60);
         
         goldSize = agr.getSize();

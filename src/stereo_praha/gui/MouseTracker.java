@@ -8,34 +8,38 @@ import java.awt.event.MouseEvent;
  */
 public class MouseTracker extends MouseAdapter {
 
-    int lastX = -1;
-    int lastY = -1;
+    int dragStartX = -1;
+    int dragStartY = -1;
 
-    int mouseX = 0;
-    int mouseY = 0;
+    public int mouseX = 0;
+    public int mouseY = 0;
+
+    public int baseX = 0;
+    public int baseY = 0;
 
     public void reset()
     {
         mouseX = 0;
         mouseY = 0;
+        baseX = 0;
+        baseY = 0;
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
-        lastX = e.getX();
-        lastY = e.getY();
+        dragStartX = e.getX();
+        dragStartY = e.getY();
     }
 
     @Override
     public void mouseDragged(MouseEvent e) {
-
-        mouseX += e.getX();
-        mouseY += e.getY();
-
-        mouseX -= lastX;
-        mouseY -= lastY;
-
-        lastX = e.getX();
-        lastY = e.getY();
+        mouseX = baseX + e.getX() - dragStartX;
+        mouseY = baseY + e.getY() - dragStartY;
     }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        baseX = mouseX;
+        baseY = mouseY;
+    }    
 }

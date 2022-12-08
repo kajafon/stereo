@@ -71,8 +71,11 @@ public class ImpulseGui {
         
         Impulse impulse = calcResultImpulse();
 
-        previewObject.setTranslation(Algebra.scale(impulse.translation, 0.3, new double[3]));
-        Algebra.rotate3D(previewObject.matrix, impulse.rotation);                
+        double[] tmp = impulse.getTranslation(null);
+        previewObject.setTranslation(Algebra.scale(tmp, 0.3, tmp));
+        
+        impulse.getRotation(tmp);
+        Algebra.rotate3D(previewObject.matrix, tmp);                
     }
     
     void applyPulls()
@@ -80,8 +83,11 @@ public class ImpulseGui {
         object.project();
         attractor.project();
         Impulse impulse = calcResultImpulse();
-        Algebra.rotate3D(object.matrix, impulse.rotation);          
-        Algebra.combine(object.translation, impulse.translation, object.translation);
+        double[] tmp = impulse.getRotation(null);
+        double s = Algebra.size(tmp);
+        Algebra.rotate3D(object.matrix, tmp);          
+        impulse.getTranslation(tmp);
+        Algebra.add(object.translation, tmp, object.translation);
         object.project();
         attractor.project();
         
@@ -196,7 +202,7 @@ public class ImpulseGui {
                         Algebra.rand(0, 3), Algebra.rand(0, 3), Algebra.rand(0, 3)
                     });
                     
-                    object.setTranslation(new double[]{Algebra.rand(10, 20), Algebra.rand(10, 20), Algebra.rand(10, 20)});
+                    object.setTranslation(new double[]{Algebra.rand(10, 90), Algebra.rand(10, 90), Algebra.rand(10, 90)});
                     
                     applyPulls();
                     scene.project();

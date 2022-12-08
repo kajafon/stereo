@@ -284,7 +284,7 @@ public class Algebra {
         return dest;
     }
 
-    public static double[] combine(double[] v1, double[] v2, double[] dest)
+    public static double[] add(double[] v1, double[] v2, double[] dest)
     {
         if (dest == null) { 
             dest = new double[v1.length];
@@ -656,8 +656,8 @@ public class Algebra {
     {
        double t = - scalarValue(plane, x)/scalarValue(plane, plane);
        double[] out = scale(plane, t, null);
-       combine(out, x, out);
-       if (p != null) combine(out, p, out);
+       add(out, x, out);
+       if (p != null) add(out, p, out);
        return out;
     }
     
@@ -870,5 +870,22 @@ public class Algebra {
 //        testHeightOfTriangle();
 //        testVectorProduct();
     }
+    
+    public static void setPosition(double[] matrix, double[] position) {
+        matrix[12] = position[0];
+        matrix[13] = position[1];
+        matrix[14] = position[2];        
+    }
 
+    public static void addToPosition(double[] matrix, double[] position) {
+        matrix[12] += position[0];
+        matrix[13] += position[1];
+        matrix[14] += position[2];        
+    }
+
+    public static void subtractFromPosition(double[] matrix, double[] position) {
+        matrix[12] -= position[0];
+        matrix[13] -= position[1];
+        matrix[14] -= position[2];        
+    }
 }

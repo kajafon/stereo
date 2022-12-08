@@ -15,28 +15,31 @@ public class Aggregator {
     public double[] sum;
     public int count = 0;
     public double[] avg;
-
+    double[] sizes;
+  
+    boolean calculated = false;
+    
     public Aggregator(int size) {
         max = new double[size];
         min = new double[size];
         sum = new double[size];
-        
-        for (int i=0; i<max.length; i++) {
-            max[i] = Double.NEGATIVE_INFINITY;
-            min[i] = Double.POSITIVE_INFINITY;            
-        }
+        avg = new double[size];
+        sizes = new double[size];
+
+        reset();        
     }
     
     public void add(double x) {
+        calculated = false;
         count++;
         sum[0] += x; 
         if (x > max[0]) max[0] = x;
-        if (x < min[0]) min[0] = x;            
-        
+        if (x < min[0]) min[0] = x;                    
     }
     
     public void add(double[] x) {
         count++;
+        calculated = false;
         
         for (int i=0; i<max.length; i++) {
            sum[i] += x[i]; 
@@ -47,39 +50,60 @@ public class Aggregator {
     
     public double getAverage(int i)
     {
-        if (avg == null){
-            avg = getAverage();
+        if (!calculated){
+            calcAverage();
         }
         return avg[i];
-    }
-            
+    }    
     
-    public double[] getAverage()
+    public double[] getAverage(double[] target) {
+        if (target == null) {
+            target = new double[avg.length];
+        }
+        
+        if (!calculated) {
+            calcAverage();
+        }
+        
+        System.arraycopy(avg, 0, target, 0, avg.length);
+        return target;
+    }
+    
+    void calcAverage()
     {
-        double[] av = new double[sum.length];
         for (int i=0; i<sum.length; i++) {
-            av[i] = sum[i]/count;
+            avg[i] = sum[i]/count;
         }
-        return av;
+        calculated = true;
     }
     
-    public double[] getSizes()
+    public double[] getSizes(double[] target)
     {
-        double[] v = new double[max.length];
-        for (int i=0; i<max.length; i++) {
-            v[i] = (max[i]-min[i]);
+        if (target == null) {
+            target = new double[avg.length];
         }
-        return v;
+        for (int i=0; i<max.length; i++) {
+            target[i] = (max[i]-min[i]);
+        }
+        return target;
     }
     
     public double getSize()
     {
-        double[] s = getSizes();
+        getSizes(sizes);
         double out = 0;
-        for (double v : s) {
+        for (double v : sizes) {
             out += v * v;
         }
         return Math.sqrt(out);
     }
     
+    public final void reset() {
+        count = 0;
+        calculated = false;
+        for (int i=0; i<max.length; i++) {
+            max[i] = Double.NEGATIVE_INFINITY;
+            min[i] = Double.POSITIVE_INFINITY;            
+        }
+    }    
 }

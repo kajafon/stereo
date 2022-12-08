@@ -168,7 +168,7 @@ public class HotAction {
         ArrayList<double[]> verticeAvg = new ArrayList<>();
         for (Aggregator ag : verticeAggr)
         {
-            double[] vertice = ag.getAverage();
+            double[] vertice = ag.getAverage(null);
             verticeAvg.add(vertice);
             sizeAgg.add(vertice);
         }
@@ -190,7 +190,7 @@ public class HotAction {
         }
         
         // calc symbolic scalar deviation from average gold object
-        double[] _e = errorAgg.getAverage();
+        double[] _e = errorAgg.getAverage(null);
         double e = _e[0]*_e[0] + _e[1]*_e[1] + _e[2]*_e[2];
         
         e /= sizeAgg.getSize();

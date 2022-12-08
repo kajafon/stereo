@@ -3,11 +3,25 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/Users/macbook/Documents/robota/Java/stereo_kosice/src/stereo_praha/gui/ActionGui.java</file>
-            <file>file:/Users/macbook/Documents/robota/Java/stereo_kosice/src/stereo_praha/gui/Object3D.java</file>
-            <file>file:/Users/macbook/Documents/robota/Java/stereo_kosice/src/stereo_praha/gui/StereoSolver.java</file>
-            <file>file:/Users/macbook/Documents/robota/Java/stereo_kosice/src/stereo_praha/Algebra.java</file>
-            <file>file:/Users/macbook/Documents/robota/Java/stereo_kosice/src/stereo_praha/Impulse.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/ImpulseSolver.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/HotAction.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/ImpulseGui.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/Object3D.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/StereoRelaxer.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/Aggregator.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/ActionGuiOnImpulse.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/Impulse.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/stuff3D.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/PlaceOfAction_inspiration.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/Something3D.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/NewStereoSolver.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/Algebra.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/Quaternion.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/ArtefactsZ.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/StereoSolver.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/StereoTask.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/GloryIsMine.java</file>
+            <file>file:/C:/Users/sdsdf/Documents/_robota/stereo/src/stereo_praha/gui/ActionGui.java</file>
         </group>
     </open-files>
 </project-private>
