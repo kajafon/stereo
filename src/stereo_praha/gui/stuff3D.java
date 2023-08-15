@@ -85,6 +85,13 @@ public class stuff3D {
         }
     }
 
+    public static void setRotation(double[] matrix, double angelX, double angelY, double angelZ) {
+        double[] pos = Algebra.getPositionBase(matrix, null);
+        Algebra.unity(matrix);
+        rotate(matrix, angelX, angelY, angelZ, 0);
+        Algebra.setPosition(matrix, pos);
+    }
+    
     public static void rotate(double[] m, double angelX, double angelY, double angelZ, double zPivot) {
         m[14] -= zPivot;
 

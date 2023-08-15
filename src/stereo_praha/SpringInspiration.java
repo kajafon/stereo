@@ -12,9 +12,10 @@ public class SpringInspiration {
     public static Object3D objectFromProjection(double[][] projected, Object3D obj, double focalLength, double rayLength) {
         if (obj == null) {
             obj = new Object3D();
-        } else {
-            obj.init(projected.length + 1, projected.length, 2);
         }
+        
+        obj.init(projected.length + 1, projected.length, 2);
+        
         double[][] vectors = obj.vertex;
 
         for (int i = 0; i < projected.length; i++) {

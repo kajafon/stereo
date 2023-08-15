@@ -10,6 +10,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -43,9 +45,11 @@ public class ExperimentGui {
     JPanel goldPanel;
     GraphPanel graphPanel = new GraphPanel();
     MouseTracker mouseTracker = new MouseTracker();
+    MouseTracker mouseTracker_move = new MouseTracker();
 
+    double[] superscene_matrix = new double[16];
     
-    double scale = 500;
+    double scale = 700;
 
     public void relax() {
         solver.relaxAndReconstruct();             
@@ -53,6 +57,7 @@ public class ExperimentGui {
 
     public ExperimentGui(NewStereoSolver solver) {
         this.solver = solver;
+        Algebra.setPosition(superscene_matrix, new double[]{0,0,60});
     }
     
     double xGuiToObject(double x)
@@ -64,44 +69,64 @@ public class ExperimentGui {
     {
         return (y - panel.getHeight()/2)/scale;
     }    
-
+    
     MouseAdapter createMouseManipulator()
     {
         return new MouseAdapter() {
-
+            int btn;
+            
             @Override
             public void mouseDragged(MouseEvent e) {
-                mouseTracker.mouseDragged(e);
-                drag(mouseTracker.mouseX, mouseTracker.mouseY);
+                if (btn == MouseEvent.BUTTON1) {
+                    mouseTracker.mouseDragged(e);
+                    drag(mouseTracker.mouseX, mouseTracker.mouseY);
+                } else {
+                    mouseTracker_move.mouseDragged(e);
+                    sceneOffsetX += mouseTracker_move.dx / 2;
+                    sceneOffsetY += mouseTracker_move.dy / 2;
+                }
+                panel.repaint();
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
-                mouseTracker.mousePressed(e); 
+                btn = e.getButton();
+                if (btn == MouseEvent.BUTTON1) {
+                    mouseTracker.mousePressed(e);   
+                } else {
+                    mouseTracker_move.mousePressed(e);   
+                }
                 panel.repaint();
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                mouseTracker.mouseReleased(e);
+                if (btn == MouseEvent.BUTTON1) {
+                    mouseTracker.mouseReleased(e);
+                } else {
+                    mouseTracker_move.mouseReleased(e);
+                }
             }            
         };
     }   
     
+    int sceneOffsetX = 0;
+    int sceneOffsetY = 0;
+    
     void draw(Graphics g) {
-
-        int mx = panel.getWidth()/2;
-        int my = panel.getHeight()/2;
+//        int mx = panel.getWidth()/2;
+//        int my = panel.getHeight()/2;
        
-        solver.scene.draw(g, scale, 0, 0);
+        solver.scene.project(superscene_matrix);
+        solver.scene.draw(g, scale, sceneOffsetX, sceneOffsetY);
         if (goldPanel != null)
             goldPanel.repaint();
     }
 
     void drag(double mx, double my)
     {
-        solver.scene.setRotation(my / 300, -mx / 300, 0);
-        solver.scene.project();
+//        solver.scene.setRotation(my / 300, -mx / 300, 0);
+        stuff3D.setRotation(superscene_matrix, my / 300, -mx / 300, 0);
         panel.repaint();
     }
     
@@ -129,7 +154,7 @@ public class ExperimentGui {
         new Thread(runningSequence).start();
     }
 
-    public JPanel getMainPanel()
+    public JPanel createMainPanel()
     {
         if (gui != null)
             return gui;
@@ -172,8 +197,17 @@ public class ExperimentGui {
         JButton showGoldButton = new JButton(new AbstractAction("show gold"){
             @Override
             public void actionPerformed(ActionEvent e) {                
-                runSequence(() -> {
-                    solver.rotateGold(0.2);                
+                runSequence(new Runnable(){                    
+                    int cntr = 0;
+                    @Override 
+                    public void run() {
+                        if (cntr < 50) {
+                            solver.rotateGold(0.1, Algebra.AXIS_Y);                
+                        } else {
+                            solver.rotateGold(0.1, Algebra.AXIS_Z);                
+                        }
+                        cntr++;
+                    }
                 });
             }
         });
@@ -187,17 +221,34 @@ public class ExperimentGui {
         JButton rollButton = new JButton(new AbstractAction("roll"){
             @Override
             public void actionPerformed(ActionEvent e) {
-                solver.roll();
-                
+                solver.roll();                
                 panel.repaint();
             }
         });        
+        
+        JButton centerButton = new JButton(new AbstractAction("center"){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                sceneOffsetX = 0;
+                sceneOffsetY = 0;
+                panel.repaint();
+            }
+        }); 
+        JButton placeItButton = new JButton(new AbstractAction("place it!"){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                solver.placeIt();
+                panel.repaint();
+            }
+        }); 
         panel.setFocusable(true);
         panel.add(relaxButton);
         panel.add(relaxXButton);
         panel.add(randomizeButton);
         panel.add(rollButton);
         panel.add(showGoldButton);
+        panel.add(centerButton);
+        panel.add(placeItButton);
         
         gui = new JPanel();
         gui.setLayout(new BorderLayout());
@@ -207,14 +258,24 @@ public class ExperimentGui {
         
         return gui;
     }
-
     
-    public static void main(String[] args) {
+    public static void main_2_solvers(String[] args) {
         
         NewStereoSolver solver = new NewStereoSolver(SampleObject.platforms(3),  0.1, 0.15);
         ExperimentGui gui = new ExperimentGui(solver);
+
+        NewStereoSolver solver2 = new NewStereoSolver(SampleObject.platforms(3),  -0.2, -0.25);
+        ExperimentGui gui2 = new ExperimentGui(solver2);
         
-        JPanel p = gui.getMainPanel();
+        JPanel p = new JPanel();
+        
+        p.setLayout(new GridLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        
+        gbc.gridx = gbc.gridy = 1;                
+        p.add(gui.createMainPanel(), gbc);
+        gbc.gridx += 1;                
+        p.add(gui2.createMainPanel(), gbc);
         
         GuiUtils.frameIt(p, 1100, 500, new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
@@ -222,4 +283,20 @@ public class ExperimentGui {
             }
          });
     }
+
+    public static void main(String[] args) {
+        
+        NewStereoSolver solver = new NewStereoSolver(SampleObject.platforms(3),  0.1, 0.15);
+        ExperimentGui gui = new ExperimentGui(solver);
+
+        JPanel p = gui.createMainPanel();
+        
+        GuiUtils.frameIt(p, 1100, 500, new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                
+            }
+         });
+    }
+
+
 }

@@ -129,7 +129,22 @@ public class Algebra {
 
         return m;
     }
+    public static double[] clearRotation(double[] m) {
+        if (m == null) {
+            m = new double[16];
+        }
 
+        for (int i = 0, j = 0; i < 12; i++) {
+            if (i == j) {
+                m[i] = 1.0;
+                j += 5;
+            } else {
+                m[i] = 0;
+            }
+        }
+
+        return m;
+    }
     /**
      * m3 = m1 * m2
      *

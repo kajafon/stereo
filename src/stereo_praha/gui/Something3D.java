@@ -24,7 +24,9 @@ public abstract class Something3D {
     
     double angleX;
     double angleY;
-    double angleZ;    
+    double angleZ;  
+    
+    /** @deprecated */
     double[] translation = {0,0,0};
     
     public abstract void draw(Graphics g, double scale, int shiftx, int shifty);
@@ -94,6 +96,7 @@ public abstract class Something3D {
         Algebra.unity(matrix);
     }
 
+    /** @deprecated */
     public void setRotation(double angleX, double angleY, double angleZ) {
 
         this.angleX = angleX;
@@ -105,20 +108,24 @@ public abstract class Something3D {
 
     }
     
+    /** @deprecated */
     public void setRotation(double angleX, double angleY, double angleZ, double pivot) {
         setRotation(angleX, angleY, angleZ);
     }
     
+    /** @deprecated */
     public void setTranslation(double[] v) {
        Algebra.copy(v, translation);
     }
     
+    /** @deprecated */
     public void setTranslation(double x, double y, double z) {
         translation[0] = x;
         translation[1] = y;
         translation[2] = z;
     }
     
+    /** @deprecated toto je gadzovina  */
     public void rotate(double vax, double vay, double vaz) {
         angleX += vax;
         angleY += vay;
