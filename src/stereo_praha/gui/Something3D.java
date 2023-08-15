@@ -31,7 +31,16 @@ public abstract class Something3D {
     
     public abstract void draw(Graphics g, double scale, int shiftx, int shifty);
     public abstract void project_implemented(double[] tmp_matrix); 
-
+    
+    boolean enabled = true;
+    
+    public void setEnabled(boolean val) {
+        enabled = val;
+    }
+    
+    public boolean isEnabled() {
+        return enabled;
+    }
     
     String name = "";
 
@@ -71,6 +80,11 @@ public abstract class Something3D {
     }
     
     public void project(double[] parent_matrix) {
+        
+        if (!enabled) {
+            return;
+        }
+        
         System.arraycopy(matrix, 0, tmp_matrix, 0, matrix.length);
         
         tmp_matrix[12] += translation[0];

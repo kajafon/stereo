@@ -129,6 +129,7 @@ public class Algebra {
 
         return m;
     }
+    
     public static double[] clearRotation(double[] m) {
         if (m == null) {
             m = new double[16];
@@ -921,9 +922,13 @@ public class Algebra {
     }
     
     public static void setPosition(double[] matrix, double[] position) {
-        matrix[12] = position[0];
-        matrix[13] = position[1];
-        matrix[14] = position[2];        
+        setPosition(matrix, position[0], position[1], position[2]);        
+    }
+    
+    public static void setPosition(double[] matrix, double x, double y, double z) {
+        matrix[12] = x;
+        matrix[13] = y;
+        matrix[14] = z;        
     }
 
     public static void addToPosition(double[] matrix, double[] position) {

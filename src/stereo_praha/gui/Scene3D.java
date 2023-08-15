@@ -34,7 +34,9 @@ public class Scene3D extends Something3D {
     {
         for (Something3D obj:objects) 
         {
-            obj.draw(g, scale, shiftx, shifty);
+            if (obj.isEnabled()) {
+                obj.draw(g, scale, shiftx, shifty);
+            }
         }        
     }
     

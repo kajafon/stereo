@@ -28,6 +28,7 @@ public class NewStereoSolver extends StereoTask {
     Object3D outline1 = new Object3D();
     Object3D outline2 = new Object3D();
     Object3D gold = new Object3D();
+    Object3D otherGold = new Object3D();
 
     Scene3D scene = new Scene3D("scene");
     Scene3D ray2Subscene = new Scene3D("ray2Subscene");
@@ -66,6 +67,35 @@ public class NewStereoSolver extends StereoTask {
         faceList = faces;
         processFeatures();
         init();
+    }
+    
+    public void setOtherSolver(NewStereoSolver other) throws Exception {
+        if (other == this) {
+            throw new Exception("other solver is the same as this");
+        }
+        otherSolver = other;        
+    }
+    
+    public void copyOtherGold() {        
+        otherGold.init(otherSolver.gold.vertex.length, otherSolver.gold.triangles.length, otherSolver.gold.triangles[0].length);
+
+        otherGold.color = Color.red;
+        
+        for(int i=0; i<otherSolver.gold.vertex.length; i++) {
+            otherGold.vertex[i][0] = otherSolver.gold.vertex[i][0];
+            otherGold.vertex[i][1] = otherSolver.gold.vertex[i][1];
+            otherGold.vertex[i][2] = otherSolver.gold.vertex[i][2];
+        }
+        
+        for(int i=0; i<otherSolver.gold.triangles.length; i++) {
+            for (int j=0; j<otherSolver.gold.triangles[i].length; j++) {
+                otherGold.triangles[i][j] = otherSolver.gold.triangles[i][j];
+            }        
+        }
+        
+        otherGold.setEnabled(true);
+        
+        System.arraycopy(otherSolver.gold.matrix, 0, otherGold.matrix, 0, otherGold.matrix.length);        
     }
     
     Object3D createOutline(double[][] projected, Object3D obj)
@@ -111,10 +141,6 @@ public class NewStereoSolver extends StereoTask {
         return goldError;
     }
     
-    public void project() {
-        scene.project();
-    }
-    
     @Override
     public double[] getVector()
     {
@@ -153,7 +179,7 @@ public class NewStereoSolver extends StereoTask {
             }
         }
         
-        origin.setTranslation(0,0, originZTranslation);
+        Algebra.setPosition(origin.matrix, 0,0, originZTranslation);
         origin.project();
                 
         for (int i=0; i<origin_projection_1.length; i++)
@@ -162,7 +188,8 @@ public class NewStereoSolver extends StereoTask {
             origin_projection_1[i][1] = origin.projected[i][1]*this.focalLength;
         }        
         
-        origin.setRotation(originAx, originAy, 0.1);
+        stuff3D.setRotation(origin.matrix, originAx, originAy, 0);
+//        origin.setRotation(originAx, originAy, 0);
         origin.project();
         
         for (int i=0; i<origin_projection_2.length; i++)
@@ -171,8 +198,7 @@ public class NewStereoSolver extends StereoTask {
             origin_projection_2[i][1] = origin.projected[i][1]*this.focalLength;
         }
         
-        origin.setRotation(0, 0, 0);
-        origin.setTranslation(0,0,originZTranslation - this.focalLength);
+        stuff3D.setRotation(origin.matrix, 0, 0, 0);
         origin.project();
     }
     
@@ -245,8 +271,10 @@ public class NewStereoSolver extends StereoTask {
         plane1.setColor(Color.gray);
         plane2.setColor(Color.blue);
         
-        gold = new Object3D();
         gold.name = "gold";
+        otherGold.name = "other gold";
+        
+        otherGold.setEnabled(false);
 
         ray2Subscene.add(rays2);
         ray2Subscene.add(plane2);
@@ -269,12 +297,15 @@ public class NewStereoSolver extends StereoTask {
         
         distanceObject = SpringInspiration.calcDistanceObjects(rays1, rays2, distanceObject);
         
-        for(Object3D obj: distanceObject) 
-            scene.add(obj);        
+        int i=0;
+        for(Object3D obj: distanceObject) {
+            obj.name = "line " + i;
+            scene.add(obj);
+        }        
         
-       
         goldError = __reconstruction();
-        scene.add(gold);
+        scene.add(gold);        
+        scene.add(otherGold);
         
         /* create a result object */
         
@@ -289,7 +320,7 @@ public class NewStereoSolver extends StereoTask {
         resultScene.add(resultPlane);
         resultScene.add(rays2Result);
         
-        stuff3D.rotate(resultScene.matrix, -problem_anglex, -problem_angley, -0.1, originZTranslation);
+        stuff3D.rotate(resultScene.matrix, -problem_anglex, -problem_angley, 0, originZTranslation);
         
         scene.add(resultScene);
 
@@ -298,7 +329,7 @@ public class NewStereoSolver extends StereoTask {
     
     public void placeIt() {        
         Algebra.unity(ray2Subscene.matrix);
-        stuff3D.rotate(ray2Subscene.matrix, -problem_anglex, -problem_angley, -0.1, originZTranslation);
+        stuff3D.rotate(ray2Subscene.matrix, -problem_anglex, -problem_angley, 0, originZTranslation);
         reconstruct();
     }
     
@@ -352,6 +383,9 @@ public class NewStereoSolver extends StereoTask {
         
         scene.project();
 
+        if (distanceObject.size() == 0) {
+            System.out.println("gold vert count: 0");
+        }
         gold.init(distanceObject.size(), origin_triangles.length, origin_triangles[0].length);
         
         /* copy polygon indicies */

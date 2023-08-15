@@ -19,6 +19,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
@@ -57,6 +58,7 @@ public class ExperimentGui {
 
     public ExperimentGui(NewStereoSolver solver) {
         this.solver = solver;
+        Algebra.unity(superscene_matrix);
         Algebra.setPosition(superscene_matrix, new double[]{0,0,60});
     }
     
@@ -241,6 +243,20 @@ public class ExperimentGui {
                 panel.repaint();
             }
         }); 
+        JButton copyGoldButton = new JButton(new AbstractAction("copy other gold"){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                solver.copyOtherGold();
+                panel.repaint();
+            }
+        }); 
+        JCheckBox hideGoldChb = new JCheckBox(new AbstractAction("show gold"){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                 solver.gold.setEnabled(!solver.gold.isEnabled());
+                 panel.repaint();
+            }
+        });
         panel.setFocusable(true);
         panel.add(relaxButton);
         panel.add(relaxXButton);
@@ -249,6 +265,8 @@ public class ExperimentGui {
         panel.add(showGoldButton);
         panel.add(centerButton);
         panel.add(placeItButton);
+        panel.add(copyGoldButton);
+        panel.add(hideGoldChb);
         
         gui = new JPanel();
         gui.setLayout(new BorderLayout());
@@ -259,13 +277,22 @@ public class ExperimentGui {
         return gui;
     }
     
-    public static void main_2_solvers(String[] args) {
+    /** 2 solvers */
+    public static void main(String[] args) {
         
         NewStereoSolver solver = new NewStereoSolver(SampleObject.platforms(3),  0.1, 0.15);
         ExperimentGui gui = new ExperimentGui(solver);
 
         NewStereoSolver solver2 = new NewStereoSolver(SampleObject.platforms(3),  -0.2, -0.25);
         ExperimentGui gui2 = new ExperimentGui(solver2);
+        
+        try {
+            solver.setOtherSolver(solver2);
+            solver2.setOtherSolver(solver);
+        } catch(Exception e) {
+            e.printStackTrace();
+            return;
+        }
         
         JPanel p = new JPanel();
         
@@ -284,7 +311,7 @@ public class ExperimentGui {
          });
     }
 
-    public static void main(String[] args) {
+    public static void main_1_solver(String[] args) {
         
         NewStereoSolver solver = new NewStereoSolver(SampleObject.platforms(3),  0.1, 0.15);
         ExperimentGui gui = new ExperimentGui(solver);

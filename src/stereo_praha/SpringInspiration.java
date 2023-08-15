@@ -66,7 +66,6 @@ public class SpringInspiration {
 
             if (Double.isNaN(res[1])) {
                 System.out.println("invalid distance: " + res);
-                continue;
             }
 
             Object3D link;
