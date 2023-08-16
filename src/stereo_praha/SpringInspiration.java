@@ -28,7 +28,7 @@ public class SpringInspiration {
         vectors[vectors.length - 1][1] = 0;
         vectors[vectors.length - 1][2] = -focalLength;
 
-        int[][] tri = obj.triangles;
+        int[][] tri = obj.polygons;
 
         for (int i=0; i<projected.length; i++)
         {
@@ -85,8 +85,8 @@ public class SpringInspiration {
             link.vertex[1][1] = res[5];
             link.vertex[1][2] = res[6];
 
-            link.triangles[0][0] = 0;
-            link.triangles[0][1] = 1;
+            link.polygons[0][0] = 0;
+            link.polygons[0][1] = 1;
 
         }
 

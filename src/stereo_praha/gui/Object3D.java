@@ -9,7 +9,7 @@ import stereo_praha.Algebra;
 public class Object3D extends Something3D {
 
     public double[][] vertex;
-    public int[][] triangles;
+    public int[][] polygons;
 
     Color color = Color.GRAY;
     
@@ -40,8 +40,8 @@ public class Object3D extends Something3D {
             transformed = new double[vertexNum][3];
             projected = new double[vertexNum][2];
         }
-        if (triNum > 0 && (triangles == null || triangles.length != triNum)) {
-            triangles = new int[triNum][faceVertices];
+        if (triNum > 0 && (polygons == null || polygons.length != triNum)) {
+            polygons = new int[triNum][faceVertices];
         }
         
         Algebra.unity(matrix);
@@ -56,11 +56,11 @@ public class Object3D extends Something3D {
         if (copy) {
             this.vertex = new double[vertex.length][];
             if (triangles != null) {
-                this.triangles = new int[triangles.length][];
+                this.polygons = new int[triangles.length][];
             }
         } else {
             this.vertex = vertex;
-            this.triangles = triangles;
+            this.polygons = triangles;
         }
 
         transformed = new double[vertex.length][];
@@ -78,8 +78,8 @@ public class Object3D extends Something3D {
         
         if (triangles != null && copy) {
             for (int i=0; i<triangles.length; i++){
-                this.triangles[i] = new int[triangles[i].length];
-                System.arraycopy(triangles[i], 0, this.triangles[i], 0, triangles[i].length);
+                this.polygons[i] = new int[triangles[i].length];
+                System.arraycopy(triangles[i], 0, this.polygons[i], 0, triangles[i].length);
             }
         }
     }
@@ -99,19 +99,19 @@ public class Object3D extends Something3D {
             newVertex[vertex.length + i][1] = vert[i][1];
             newVertex[vertex.length + i][2] = vert[i][2];
         }
-        int[][] newTria = new int[triangles.length + tria.length][2];
-        for (int i=0; i<triangles.length; i++)
+        int[][] newTria = new int[polygons.length + tria.length][2];
+        for (int i=0; i<polygons.length; i++)
         {
-            newTria[i][0] = triangles[i][0];
-            newTria[i][1] = triangles[i][1];
+            newTria[i][0] = polygons[i][0];
+            newTria[i][1] = polygons[i][1];
         }
         for (int i=0; i<tria.length; i++)
         {
-            newTria[triangles.length + i][0] = tria[i][0] + vertex.length;
-            newTria[triangles.length + i][1] = tria[i][1] + vertex.length;
+            newTria[polygons.length + i][0] = tria[i][0] + vertex.length;
+            newTria[polygons.length + i][1] = tria[i][1] + vertex.length;
         }
 
-        triangles = newTria;
+        polygons = newTria;
         vertex = newVertex;
         transformed = new double[vertex.length][3];
         projected = new double[vertex.length][2];
@@ -120,12 +120,12 @@ public class Object3D extends Something3D {
     }
     
     public void addTransformed(Object3D other) {
-        add(other.transformed, other.triangles);
+        add(other.transformed, other.polygons);
 
     }
     
     public void addOriginal(Object3D other) {
-        add(other.vertex, other.triangles);
+        add(other.vertex, other.polygons);
     }
 
     public Color getColor() {
@@ -148,7 +148,7 @@ public class Object3D extends Something3D {
     public void draw(Graphics g, double scale, int shiftx, int shifty) 
     {
         g.setColor(color);
-        stuff3D.draw(g, scale, triangles, projected, shiftx, shifty);
+        stuff3D.draw(g, scale, polygons, projected, shiftx, shifty);
         
         for(Object[] e: lineColors) {
             g.setColor((Color)e[1]);

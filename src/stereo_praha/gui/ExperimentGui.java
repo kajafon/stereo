@@ -250,6 +250,13 @@ public class ExperimentGui {
                 panel.repaint();
             }
         }); 
+        JButton copyRaysButton = new JButton(new AbstractAction("copy other rays 2"){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                solver.copyOtherRays2();
+                panel.repaint();
+            }
+        });
         JCheckBox hideGoldChb = new JCheckBox(new AbstractAction("show gold"){
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -266,6 +273,7 @@ public class ExperimentGui {
         panel.add(centerButton);
         panel.add(placeItButton);
         panel.add(copyGoldButton);
+        panel.add(copyRaysButton);
         panel.add(hideGoldChb);
         
         gui = new JPanel();

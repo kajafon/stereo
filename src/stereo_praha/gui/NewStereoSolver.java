@@ -13,7 +13,7 @@ public class NewStereoSolver extends StereoTask {
     NewStereoSolver otherSolver = null;    
     
     double focalLength = 15;
-    double originZTranslation = 40;
+    double originZPosition = 40;
     double problem_anglex;
     double problem_angley;
 
@@ -29,6 +29,7 @@ public class NewStereoSolver extends StereoTask {
     Object3D outline2 = new Object3D();
     Object3D gold = new Object3D();
     Object3D otherGold = new Object3D();
+    Object3D otherRays2 = new Object3D();
 
     Scene3D scene = new Scene3D("scene");
     Scene3D ray2Subscene = new Scene3D("ray2Subscene");
@@ -76,8 +77,16 @@ public class NewStereoSolver extends StereoTask {
         otherSolver = other;        
     }
     
-    public void copyOtherGold() {        
-        otherGold.init(otherSolver.gold.vertex.length, otherSolver.gold.triangles.length, otherSolver.gold.triangles[0].length);
+    public void copyOtherGold() {     
+        
+        if (!otherSolver.gold.isEnabled()) {
+            otherGold.setEnabled(false);
+            System.out.println("... other gold not ready");
+            return;
+        }
+        
+        otherGold.setEnabled(true);
+        otherGold.init(otherSolver.gold.vertex.length, otherSolver.gold.polygons.length, otherSolver.gold.polygons[0].length);
 
         otherGold.color = Color.red;
         
@@ -87,15 +96,33 @@ public class NewStereoSolver extends StereoTask {
             otherGold.vertex[i][2] = otherSolver.gold.vertex[i][2];
         }
         
-        for(int i=0; i<otherSolver.gold.triangles.length; i++) {
-            for (int j=0; j<otherSolver.gold.triangles[i].length; j++) {
-                otherGold.triangles[i][j] = otherSolver.gold.triangles[i][j];
+        for(int i=0; i<otherSolver.gold.polygons.length; i++) {
+            for (int j=0; j<otherSolver.gold.polygons[i].length; j++) {
+                otherGold.polygons[i][j] = otherSolver.gold.polygons[i][j];
             }        
         }
         
         otherGold.setEnabled(true);
         
         System.arraycopy(otherSolver.gold.matrix, 0, otherGold.matrix, 0, otherGold.matrix.length);        
+    }
+    
+    void copyOtherRays2() {        
+        otherSolver.project();
+        otherRays2.init(otherSolver.rays2.transformed.length, otherSolver.rays2.polygons.length, 2);
+        otherRays2.setColor(Color.red);
+        for (int i=0; i<otherSolver.rays2.transformed.length; i++) {
+            otherRays2.vertex[i][0] = otherSolver.rays2.transformed[i][0];
+            otherRays2.vertex[i][1] = otherSolver.rays2.transformed[i][1];
+            otherRays2.vertex[i][2] = otherSolver.rays2.transformed[i][2];
+        }
+        
+        for (int i=0; i<otherSolver.rays2.polygons.length; i++) {
+            otherRays2.polygons[i][0] = otherSolver.rays2.polygons[i][1];
+            otherRays2.polygons[i][1] = otherSolver.rays2.polygons[i][0];
+        }
+
+        otherRays2.setEnabled(true);
     }
     
     Object3D createOutline(double[][] projected, Object3D obj)
@@ -114,7 +141,7 @@ public class NewStereoSolver extends StereoTask {
         
         for(int i=0; i<origin_triangles.length; i++) {
             for(int j=0; j<origin_triangles[i].length; j++) { 
-                obj.triangles[i][j] = origin_triangles[i][j];
+                obj.polygons[i][j] = origin_triangles[i][j];
             }
         } 
         
@@ -169,17 +196,17 @@ public class NewStereoSolver extends StereoTask {
         
         origin_projection_1 = new double[origin.projected.length][2];
         origin_projection_2 = new double[origin.projected.length][2];
-        origin_triangles = new int[origin.triangles.length][origin.triangles[0].length];
+        origin_triangles = new int[origin.polygons.length][origin.polygons[0].length];
         
-        for (int i=0; i<origin.triangles.length; i++)
+        for (int i=0; i<origin.polygons.length; i++)
         {
-            for (int j=0; j<origin.triangles[0].length; j++)
+            for (int j=0; j<origin.polygons[0].length; j++)
             {
-                origin_triangles[i][j] = origin.triangles[i][j];
+                origin_triangles[i][j] = origin.polygons[i][j];
             }
         }
         
-        Algebra.setPosition(origin.matrix, 0,0, originZTranslation);
+        Algebra.setPosition(origin.matrix, 0,0, originZPosition);
         origin.project();
                 
         for (int i=0; i<origin_projection_1.length; i++)
@@ -275,6 +302,7 @@ public class NewStereoSolver extends StereoTask {
         otherGold.name = "other gold";
         
         otherGold.setEnabled(false);
+        otherRays2.setEnabled(false);
 
         ray2Subscene.add(rays2);
         ray2Subscene.add(plane2);
@@ -284,6 +312,7 @@ public class NewStereoSolver extends StereoTask {
         scene.add(plane1);
         scene.add(outline1); 
         scene.add(ray2Subscene);
+        scene.add(otherRays2);
                 
         rays1 = SpringInspiration.objectFromProjection(origin_projection_1, rays1, this.focalLength, 5);
         outline1 = createOutline(origin_projection_1, outline1);
@@ -320,7 +349,7 @@ public class NewStereoSolver extends StereoTask {
         resultScene.add(resultPlane);
         resultScene.add(rays2Result);
         
-        stuff3D.rotate(resultScene.matrix, -problem_anglex, -problem_angley, 0, originZTranslation);
+        stuff3D.rotate(resultScene.matrix, -problem_anglex, -problem_angley, 0, originZPosition);
         
         scene.add(resultScene);
 
@@ -329,8 +358,12 @@ public class NewStereoSolver extends StereoTask {
     
     public void placeIt() {        
         Algebra.unity(ray2Subscene.matrix);
-        stuff3D.rotate(ray2Subscene.matrix, -problem_anglex, -problem_angley, 0, originZTranslation);
+        stuff3D.rotate(ray2Subscene.matrix, -problem_anglex, -problem_angley, 0, originZPosition);
         reconstruct();
+    }
+    
+    void project() {
+        scene.project();
     }
     
     public void randomize() {        
@@ -393,7 +426,7 @@ public class NewStereoSolver extends StereoTask {
         {
             for (int i=0; i<origin_triangles[j].length; i++)
             {
-                gold.triangles[j][i] = origin_triangles[j][i];
+                gold.polygons[j][i] = origin_triangles[j][i];
             }
         }
         
@@ -476,6 +509,9 @@ public class NewStereoSolver extends StereoTask {
     */    
     void __relax()
     {        
+//        copyOtherGold();
+//        copyOtherRays2();
+
         scene.project();
         SpringInspiration.calcDistanceObjects(rays1, rays2, distanceObject, Color.RED);
         scene.project();
@@ -483,8 +519,14 @@ public class NewStereoSolver extends StereoTask {
         /* impulse that is a combination of partial impulses where each of them 
            represents an attractive force between corresponding rays. 
         */
+
+
         Impulse impulse = new Impulse();
-        impulse.init(distanceObject.size());
+        if (otherRays2.isEnabled()) {
+            impulse.init(distanceObject.size()*2);        
+        } else {
+            impulse.init(distanceObject.size());
+        }
         double[] tmp = new double[3];
         
         for(Object3D link : distanceObject) {            
@@ -494,6 +536,31 @@ public class NewStereoSolver extends StereoTask {
             */
             impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
         } 
+        
+        
+//        if (otherGold.isEnabled()) {
+//            for(int i=0; i<gold.transformed.length; i++) {            
+//                
+//                /** impulse vector to tmp */
+//                Algebra.difference(otherGold.transformed[i], gold.transformed[i], tmp);
+//                Object3D link = distanceObject.get(i);
+//                Algebra.copy(gold.transformed[i], link.vertex[0]);
+//                Algebra.add(tmp, link.vertex[0], link.vertex[1]);
+//                impulse.add(gold.transformed[i], tmp);
+//            }             
+//        }
+        
+//        if (otherRays2.isEnabled()) {
+//            SpringInspiration.calcDistanceObjects(otherRays2, rays1, distanceObject, Color.RED);
+//            scene.project();
+//            for(Object3D link : distanceObject) {            
+//                /* add partial impulse that acts on the object ray2 in the point where the ray from ray2 is closest to 
+//                   corresponding ray in ray1. this partial impulse materializes an idea of attractive force between
+//                   corresponding rays in the two sets of rays
+//                */
+//                impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
+//            }             
+//        }        
 
         double[] rotationVec = impulse.getRotation(null);
         double[] translationVec = impulse.getTranslation(null);

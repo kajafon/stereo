@@ -173,13 +173,13 @@ public class ImpulseSolver {
     {        
         origin_projection_1 = new double[origin.projected.length][2];
         origin_projection_2 = new double[origin.projected.length][2];
-        origin_triangles = new int[origin.triangles.length][origin.triangles[0].length];
+        origin_triangles = new int[origin.polygons.length][origin.polygons[0].length];
         
-        for (int i=0; i<origin.triangles.length; i++)
+        for (int i=0; i<origin.polygons.length; i++)
         {
-            for (int j=0; j<origin.triangles[0].length; j++)
+            for (int j=0; j<origin.polygons[0].length; j++)
             {
-                origin_triangles[i][j] = origin.triangles[i][j];
+                origin_triangles[i][j] = origin.polygons[i][j];
             }
         }
         
@@ -393,7 +393,7 @@ public class ImpulseSolver {
         {
             for (int i=0; i<origin_triangles[j].length; i++)
             {
-                gold.triangles[j][i] = origin_triangles[j][i];
+                gold.polygons[j][i] = origin_triangles[j][i];
             }
         }
         
@@ -448,7 +448,7 @@ public class ImpulseSolver {
         
         for(int i=0; i<origin_triangles.length; i++) {
             for(int j=0; j<origin_triangles[i].length; j++) { 
-                obj.triangles[i][j] = origin_triangles[i][j];
+                obj.polygons[i][j] = origin_triangles[i][j];
             }
         } 
         
