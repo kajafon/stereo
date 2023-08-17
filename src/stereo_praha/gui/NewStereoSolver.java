@@ -30,6 +30,7 @@ public class NewStereoSolver extends StereoTask {
     Object3D gold = new Object3D();
     Object3D otherGold = new Object3D();
     Object3D otherRays2 = new Object3D();
+    Object3D serviceObj = new Object3D();
 
     Scene3D scene = new Scene3D("scene");
     Scene3D ray2Subscene = new Scene3D("ray2Subscene");
@@ -303,6 +304,8 @@ public class NewStereoSolver extends StereoTask {
         
         otherGold.setEnabled(false);
         otherRays2.setEnabled(false);
+        
+        serviceObj.setEnabled(false);
 
         ray2Subscene.add(rays2);
         ray2Subscene.add(plane2);
@@ -313,6 +316,7 @@ public class NewStereoSolver extends StereoTask {
         scene.add(outline1); 
         scene.add(ray2Subscene);
         scene.add(otherRays2);
+        scene.add(serviceObj);
                 
         rays1 = SpringInspiration.objectFromProjection(origin_projection_1, rays1, this.focalLength, 5);
         outline1 = createOutline(origin_projection_1, outline1);
@@ -354,6 +358,62 @@ public class NewStereoSolver extends StereoTask {
         scene.add(resultScene);
 
         System.out.println("..");
+    }
+    
+    /**
+     * calc two vectors to apply to rays2 scene to move rays intersection to expected position
+     * scene is assumed to be projected for reconstruction */
+    public void fixRaysPosition(double[] outTranslation){
+        
+        double[] ray1Pos = Algebra.getPositionBase(rays1.tmp_matrix, null);
+        double[] ray2Pos = Algebra.getPositionBase(rays2.tmp_matrix, null);
+        
+        double[] ray1vec = Algebra.getZBase(rays1.tmp_matrix, null);
+        double[] ray2vec = Algebra.getZBase(rays2.tmp_matrix, null);
+        
+        double[] intersection = Algebra.linesDistanceSquare(ray1vec, ray1Pos, ray2vec, ray2Pos);
+        /** the closes point on ray1 to ray2*/
+        double[] p1 = new double[]{intersection[1],intersection[2],intersection[3]};
+
+        /** the closes point on ray2 to ray1*/
+        double[] p2 = new double[]{intersection[4],intersection[5],intersection[6]};
+        
+        /** raypos is the position of projection plane.
+         * here we want to make sure that reconstructed object 
+         * is on the opposite side of the plane to the focal point
+         * 
+         */
+        double dist1 = Algebra.distance(ray1Pos, p1);
+        double dist2 = Algebra.distance(ray2Pos, p2);
+        Algebra.clear(outTranslation);
+        
+        if (dist1 < focalLength){
+            double[] tmp = new double[3];
+            Algebra.copy(ray1vec, tmp);
+            Algebra.scale(tmp, dist1);
+            Algebra.copy(tmp, outTranslation);
+        }      
+
+        if (dist2 < focalLength){
+            double[] tmp = new double[3];
+            Algebra.copy(ray2vec, tmp);
+            Algebra.scale(tmp, -dist2);
+            Algebra.add(tmp, outTranslation, outTranslation);
+        }      
+
+        serviceObj.setEnabled(true);
+        serviceObj.init(2, 1, 2);
+//        
+        Algebra.copy(p1, serviceObj.vertex[0]);
+        Algebra.copy(p1, serviceObj.vertex[1]);
+        Algebra.add(outTranslation, serviceObj.vertex[1], serviceObj.vertex[1]);
+//
+        serviceObj.polygons[0][0] = 0;
+        serviceObj.polygons[0][1] = 1;
+//        
+        serviceObj.color = Color.red;        
+//        
+//        for(Object3D o : distanceObject){ o.setEnabled(false); }
     }
     
     public void placeIt() {        
@@ -537,6 +597,10 @@ public class NewStereoSolver extends StereoTask {
             impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
         } 
         
+
+        
+        
+        
         
 //        if (otherGold.isEnabled()) {
 //            for(int i=0; i<gold.transformed.length; i++) {            
@@ -573,8 +637,16 @@ public class NewStereoSolver extends StereoTask {
         Algebra.rotate3D(ray2Subscene.matrix, rotationVec);
         Algebra.addToPosition(ray2Subscene.matrix, tmp);
         
-        /* apply impulse trasnlation on ray2 matrix */
+        /* apply impulse translation on ray2 matrix */
         Algebra.addToPosition(ray2Subscene.matrix, translationVec);
+                
+        fixRaysPosition(tmp);
+        
+        System.out.println("fixture: " + Algebra.size(tmp));
+        System.out.println(" other gold:" + otherGold.isEnabled());
+        System.out.println(" other ray2:" + otherRays2.isEnabled());
+        
+        Algebra.addToPosition(ray2Subscene.matrix, tmp);
     }    
 }
 

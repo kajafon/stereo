@@ -472,7 +472,7 @@ public class Algebra {
      * @param x1
      * @param v2
      * @param x2
-     * @return [sqr(distance), p1.x, p1.y, p2.x, p2.y] // distance squared and points on lines 
+     * @return [sqr(distance), p1.x, p1.y, p1.z, p2.x, p2.y, p2.z] // distance squared and points on lines 
      */
     public static double[] linesDistanceSquare(double[] v1, double[] x1, double[] v2, double[] x2) {
         // if lines are not parallel. we want to find the smallest distance between them
@@ -941,5 +941,11 @@ public class Algebra {
         matrix[12] -= position[0];
         matrix[13] -= position[1];
         matrix[14] -= position[2];        
+    }
+    
+    public static void clear(double[] v) {
+        for (int i=0; i<v.length; i++) {
+            v[i] = 0;
+        }
     }
 }
