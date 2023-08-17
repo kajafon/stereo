@@ -363,13 +363,13 @@ public class NewStereoSolver extends StereoTask {
     /**
      * calc two vectors to apply to rays2 scene to move rays intersection to expected position
      * scene is assumed to be projected for reconstruction */
-    public void fixRaysPosition(double[] outTranslation){
+    public void fixRaysPosition(Object3D movingRaysObj, Object3D positionedRaysObj, double[] outTranslation){
         
-        double[] ray1Pos = Algebra.getPositionBase(rays1.tmp_matrix, null);
-        double[] ray2Pos = Algebra.getPositionBase(rays2.tmp_matrix, null);
+        double[] ray1Pos = Algebra.getPositionBase(positionedRaysObj.tmp_matrix, null);
+        double[] ray2Pos = Algebra.getPositionBase(movingRaysObj.tmp_matrix, null);
         
-        double[] ray1vec = Algebra.getZBase(rays1.tmp_matrix, null);
-        double[] ray2vec = Algebra.getZBase(rays2.tmp_matrix, null);
+        double[] ray1vec = Algebra.getZBase(positionedRaysObj.tmp_matrix, null);
+        double[] ray2vec = Algebra.getZBase(movingRaysObj.tmp_matrix, null);
         
         double[] intersection = Algebra.linesDistanceSquare(ray1vec, ray1Pos, ray2vec, ray2Pos);
         /** the closes point on ray1 to ray2*/
@@ -570,7 +570,7 @@ public class NewStereoSolver extends StereoTask {
     void __relax()
     {        
 //        copyOtherGold();
-//        copyOtherRays2();
+        copyOtherRays2();
 
         scene.project();
         SpringInspiration.calcDistanceObjects(rays1, rays2, distanceObject, Color.RED);
@@ -614,17 +614,17 @@ public class NewStereoSolver extends StereoTask {
 //            }             
 //        }
         
-//        if (otherRays2.isEnabled()) {
-//            SpringInspiration.calcDistanceObjects(otherRays2, rays1, distanceObject, Color.RED);
-//            scene.project();
-//            for(Object3D link : distanceObject) {            
-//                /* add partial impulse that acts on the object ray2 in the point where the ray from ray2 is closest to 
-//                   corresponding ray in ray1. this partial impulse materializes an idea of attractive force between
-//                   corresponding rays in the two sets of rays
-//                */
-//                impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
-//            }             
-//        }        
+        if (otherRays2.isEnabled()) {
+            SpringInspiration.calcDistanceObjects(otherRays2, rays2, distanceObject, Color.RED);
+            scene.project();
+            for(Object3D link : distanceObject) {            
+                /* add partial impulse that acts on the object ray2 in the point where the ray from ray2 is closest to 
+                   corresponding ray in ray1. this partial impulse materializes an idea of attractive force between
+                   corresponding rays in the two sets of rays
+                */
+                impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
+            }             
+        }        
 
         double[] rotationVec = impulse.getRotation(null);
         double[] translationVec = impulse.getTranslation(null);
@@ -640,13 +640,18 @@ public class NewStereoSolver extends StereoTask {
         /* apply impulse translation on ray2 matrix */
         Algebra.addToPosition(ray2Subscene.matrix, translationVec);
                 
-        fixRaysPosition(tmp);
+        fixRaysPosition(rays2, rays1, tmp);
+        Algebra.addToPosition(ray2Subscene.matrix, tmp);
         
-        System.out.println("fixture: " + Algebra.size(tmp));
+        if (otherRays2.isEnabled()) {
+            fixRaysPosition(rays2, otherRays2, tmp);
+            Algebra.addToPosition(ray2Subscene.matrix, tmp);            
+        }
+        
+//        System.out.println("fixture: " + Algebra.size(tmp));
         System.out.println(" other gold:" + otherGold.isEnabled());
         System.out.println(" other ray2:" + otherRays2.isEnabled());
         
-        Algebra.addToPosition(ray2Subscene.matrix, tmp);
     }    
 }
 
