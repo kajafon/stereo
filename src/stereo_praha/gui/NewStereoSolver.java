@@ -5,17 +5,21 @@ import stereo_praha.*;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import stereo.to3d.Face;
 import stereo.to3d.FtrLink;
 
 public class NewStereoSolver extends StereoTask {
 
-    NewStereoSolver otherSolver = null;    
+    Set<NewStereoSolver> otherSolvers = new HashSet<>();    
     
     double focalLength = 15;
     double originZPosition = 40;
     double problem_anglex;
     double problem_angley;
+    
+    double reconstructionError;
 
     double[][] sourceProjection = null;
     
@@ -71,58 +75,32 @@ public class NewStereoSolver extends StereoTask {
         init();
     }
     
-    public void setOtherSolver(NewStereoSolver other) throws Exception {
+    public void addOtherSolver(NewStereoSolver other) throws Exception {
         if (other == this) {
             throw new Exception("other solver is the same as this");
         }
-        otherSolver = other;        
-    }
+
+        otherSolvers.add(other);
+    }    
     
-    public void copyOtherGold() {     
+    public void copyOtherGold(NewStereoSolver otherSolver) {     
         
         if (!otherSolver.gold.isEnabled()) {
             otherGold.setEnabled(false);
             System.out.println("... other gold not ready");
             return;
         }
-        
+        otherSolver.project();
         otherGold.setEnabled(true);
-        otherGold.init(otherSolver.gold.vertex.length, otherSolver.gold.polygons.length, otherSolver.gold.polygons[0].length);
-
-        otherGold.color = Color.red;
-        
-        for(int i=0; i<otherSolver.gold.vertex.length; i++) {
-            otherGold.vertex[i][0] = otherSolver.gold.vertex[i][0];
-            otherGold.vertex[i][1] = otherSolver.gold.vertex[i][1];
-            otherGold.vertex[i][2] = otherSolver.gold.vertex[i][2];
-        }
-        
-        for(int i=0; i<otherSolver.gold.polygons.length; i++) {
-            for (int j=0; j<otherSolver.gold.polygons[i].length; j++) {
-                otherGold.polygons[i][j] = otherSolver.gold.polygons[i][j];
-            }        
-        }
-        
+        otherGold.copyTransformed_PlaceAtZero(otherSolver.gold);        
+        otherGold.color = Color.red;        
         otherGold.setEnabled(true);
-        
-        System.arraycopy(otherSolver.gold.matrix, 0, otherGold.matrix, 0, otherGold.matrix.length);        
     }
     
-    void copyOtherRays2() {        
+    void copyOtherRays2(NewStereoSolver otherSolver) {        
         otherSolver.project();
-        otherRays2.init(otherSolver.rays2.transformed.length, otherSolver.rays2.polygons.length, 2);
         otherRays2.setColor(Color.red);
-        for (int i=0; i<otherSolver.rays2.transformed.length; i++) {
-            otherRays2.vertex[i][0] = otherSolver.rays2.transformed[i][0];
-            otherRays2.vertex[i][1] = otherSolver.rays2.transformed[i][1];
-            otherRays2.vertex[i][2] = otherSolver.rays2.transformed[i][2];
-        }
-        
-        for (int i=0; i<otherSolver.rays2.polygons.length; i++) {
-            otherRays2.polygons[i][0] = otherSolver.rays2.polygons[i][1];
-            otherRays2.polygons[i][1] = otherSolver.rays2.polygons[i][0];
-        }
-
+        otherRays2.copyTransformed_PlaceAtZero(otherSolver.rays2);
         otherRays2.setEnabled(true);
     }
     
@@ -336,26 +314,16 @@ public class NewStereoSolver extends StereoTask {
             scene.add(obj);
         }        
         
-        goldError = __reconstruction();
+        __reconstruction();
         scene.add(gold);        
         scene.add(otherGold);
         
         /* create a result object */
         
         Object3D resultPlane = createPlane();
-        Object3D rays2Result = SpringInspiration.objectFromProjection(origin_projection_2, null, this.focalLength, 5);
-
         resultPlane.color = Color.LIGHT_GRAY;
-        rays2Result.color = Color.LIGHT_GRAY;
-        
-        Scene3D resultScene = new Scene3D();
-        
-        resultScene.add(resultPlane);
-        resultScene.add(rays2Result);
-        
-        stuff3D.rotate(resultScene.matrix, -problem_anglex, -problem_angley, 0, originZPosition);
-        
-        scene.add(resultScene);
+        stuff3D.rotate(resultPlane.matrix, -problem_anglex, -problem_angley, 0, originZPosition);
+        scene.add(resultPlane);
 
         System.out.println("..");
     }
@@ -470,7 +438,7 @@ public class NewStereoSolver extends StereoTask {
     }
     
     /** !!! make sure that scene is projected with scene.matrix == unity !!! */
-    private double __reconstruction()
+    private void __reconstruction()
     {
         System.out.println("reconstruction");
         
@@ -492,7 +460,8 @@ public class NewStereoSolver extends StereoTask {
         
         Aggregator agr = new Aggregator(3);
         Aggregator agr_e = new Aggregator(1);
-                
+        double[] tmp = new double[3];
+        
         for (int i=0; i<distanceObject.size(); i++)
         {
             Object3D link = distanceObject.get(i);
@@ -504,9 +473,9 @@ public class NewStereoSolver extends StereoTask {
             gold.vertex[i][1] = y;
             gold.vertex[i][2] = z;
             
-            double e = Math.abs(link.transformed[0][0] - link.transformed[1][0]); 
-            e += Math.abs(link.transformed[0][1] - link.transformed[1][1]); 
-            e += Math.abs(link.transformed[0][2] - link.transformed[1][2]); 
+            
+            Algebra.difference(link.transformed[0], link.transformed[1], tmp);
+            double e = Algebra.sizeSqr(tmp);
             
             agr.add(gold.vertex[i]);
             agr_e.add(e);            
@@ -526,11 +495,9 @@ public class NewStereoSolver extends StereoTask {
         goldSize = agr.getSize();
         
         if ( goldSize < 0.000001)
-            return Double.POSITIVE_INFINITY;
+            reconstructionError = Double.POSITIVE_INFINITY;
         
-        double error = agr_e.getAverage(0) / goldSize;
-        
-        return error;
+        reconstructionError = agr_e.getAverage(0);        
     }
     
     /** rotate ray2 scene randomly around local z axis */
@@ -570,9 +537,27 @@ public class NewStereoSolver extends StereoTask {
     void __relax()
     {        
 //        copyOtherGold();
-        copyOtherRays2();
+        copyOtherRays2(otherSolvers.iterator().next());
 
         scene.project();
+        double[] tmp = new double[3];
+        Impulse impulse = new Impulse();
+        
+        if (otherRays2.isEnabled()) {
+            impulse.init(distanceObject.size()*2);        
+            SpringInspiration.calcDistanceObjects(otherRays2, rays2, distanceObject, Color.RED);
+            scene.project();
+            for(Object3D link : distanceObject) {            
+                /* add partial impulse that acts on the object ray2 in the point where the ray from ray2 is closest to 
+                   corresponding ray in ray1. this partial impulse materializes an idea of attractive force between
+                   corresponding rays in the two sets of rays
+                */
+                impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
+            }             
+        } else {
+            impulse.init(distanceObject.size());
+        } 
+        
         SpringInspiration.calcDistanceObjects(rays1, rays2, distanceObject, Color.RED);
         scene.project();
 
@@ -580,14 +565,6 @@ public class NewStereoSolver extends StereoTask {
            represents an attractive force between corresponding rays. 
         */
 
-
-        Impulse impulse = new Impulse();
-        if (otherRays2.isEnabled()) {
-            impulse.init(distanceObject.size()*2);        
-        } else {
-            impulse.init(distanceObject.size());
-        }
-        double[] tmp = new double[3];
         
         for(Object3D link : distanceObject) {            
             /* add partial impulse that acts on the object ray2 in the point where the ray from ray2 is closest to 
@@ -613,18 +590,6 @@ public class NewStereoSolver extends StereoTask {
 //                impulse.add(gold.transformed[i], tmp);
 //            }             
 //        }
-        
-        if (otherRays2.isEnabled()) {
-            SpringInspiration.calcDistanceObjects(otherRays2, rays2, distanceObject, Color.RED);
-            scene.project();
-            for(Object3D link : distanceObject) {            
-                /* add partial impulse that acts on the object ray2 in the point where the ray from ray2 is closest to 
-                   corresponding ray in ray1. this partial impulse materializes an idea of attractive force between
-                   corresponding rays in the two sets of rays
-                */
-                impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
-            }             
-        }        
 
         double[] rotationVec = impulse.getRotation(null);
         double[] translationVec = impulse.getTranslation(null);

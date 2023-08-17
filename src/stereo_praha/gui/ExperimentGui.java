@@ -51,9 +51,12 @@ public class ExperimentGui {
     double[] superscene_matrix = new double[16];
     
     double scale = 700;
+    
+    JTextField errorTextField = null;
 
     public void relax() {
-        solver.relaxAndReconstruct();             
+        solver.relaxAndReconstruct();   
+        errorTextField.setText(String.format("%.6f", solver.reconstructionError));        
     }
 
     public ExperimentGui(NewStereoSolver solver) {
@@ -246,24 +249,33 @@ public class ExperimentGui {
         JButton copyGoldButton = new JButton(new AbstractAction("copy other gold"){
             @Override
             public void actionPerformed(ActionEvent e) {
-                solver.copyOtherGold();
+                solver.copyOtherGold(solver.otherSolvers.iterator().next());
                 panel.repaint();
             }
         }); 
         JButton copyRaysButton = new JButton(new AbstractAction("copy other rays 2"){
             @Override
             public void actionPerformed(ActionEvent e) {
-                solver.copyOtherRays2();
+                solver.copyOtherRays2(solver.otherSolvers.iterator().next());
                 panel.repaint();
             }
         });
-        JCheckBox hideGoldChb = new JCheckBox(new AbstractAction("show gold"){
+        JCheckBox showGoldChbx = new JCheckBox(new AbstractAction("show gold"){
             @Override
             public void actionPerformed(ActionEvent e) {
-                 solver.gold.setEnabled(!solver.gold.isEnabled());
+                 solver.gold.setVisible(!solver.gold.isVisible());
                  panel.repaint();
             }
         });
+        JCheckBox showOtherRaysChbx = new JCheckBox(new AbstractAction("show other rays 2"){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                 solver.otherRays2.setVisible(!solver.otherRays2.isVisible());
+                 panel.repaint();
+            }
+        });
+        
+        errorTextField = new JTextField(10);
         panel.setFocusable(true);
         panel.add(relaxButton);
         panel.add(relaxXButton);
@@ -274,7 +286,9 @@ public class ExperimentGui {
         panel.add(placeItButton);
         panel.add(copyGoldButton);
         panel.add(copyRaysButton);
-        panel.add(hideGoldChb);
+        panel.add(showGoldChbx);
+        panel.add(showOtherRaysChbx);
+        panel.add(errorTextField);
         
         gui = new JPanel();
         gui.setLayout(new BorderLayout());
@@ -294,9 +308,11 @@ public class ExperimentGui {
         NewStereoSolver solver2 = new NewStereoSolver(SampleObject.platforms(3),  -0.2, -0.25);
         ExperimentGui gui2 = new ExperimentGui(solver2);
         
+        System.out.println("solvers equal:" + solver.equals(solver2));
+        
         try {
-            solver.setOtherSolver(solver2);
-            solver2.setOtherSolver(solver);
+            solver.addOtherSolver(solver2);
+            solver2.addOtherSolver(solver);
         } catch(Exception e) {
             e.printStackTrace();
             return;
@@ -319,6 +335,7 @@ public class ExperimentGui {
          });
     }
 
+    /** 1 solver */
     public static void main_1_solver(String[] args) {
         
         NewStereoSolver solver = new NewStereoSolver(SampleObject.platforms(3),  0.1, 0.15);

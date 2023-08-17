@@ -33,11 +33,24 @@ public abstract class Something3D {
     public abstract void project_implemented(double[] tmp_matrix); 
     
     boolean enabled = true;
+    boolean visible = true;
     
+    /** if object is not visible it is still transformed, projected but not drawn */
+    public void setVisible(boolean val) {
+        visible = val;
+    }
+    
+    /** if object is not visible it is still transformed, projected but not drawn */
+    public boolean isVisible() {
+        return visible;
+    }
+    
+    /** if object is not enabled it is not transformed, projected nor drawn */
     public void setEnabled(boolean val) {
         enabled = val;
     }
     
+    /** if object is not enabled it is not transformed, projected nor drawn */
     public boolean isEnabled() {
         return enabled;
     }
@@ -81,7 +94,7 @@ public abstract class Something3D {
     
     public void project(double[] parent_matrix) {
         
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         

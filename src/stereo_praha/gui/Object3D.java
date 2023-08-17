@@ -47,6 +47,25 @@ public class Object3D extends Something3D {
         Algebra.unity(matrix);
     }
     
+    /** setup this object to be geometric copy of other object.
+     *  place this object to zero, with zero rotation (unity matrix)
+     *  ! other object is assumed to be properly transformed and projected in its scene
+     *  ! other object is expected to have unified "polygons": they have same number of vertices
+     */
+    public void copyTransformed_PlaceAtZero(Object3D other) {
+        init(other.transformed.length, other.polygons.length, other.polygons[0].length);
+        for (int i=0; i<other.transformed.length; i++) {
+            vertex[i][0] = other.transformed[i][0];
+            vertex[i][1] = other.transformed[i][1];
+            vertex[i][2] = other.transformed[i][2];
+        }
+        
+        for (int i=0; i<other.polygons.length; i++) {
+            polygons[i][0] = other.polygons[i][1];
+            polygons[i][1] = other.polygons[i][0];
+        }
+    }
+    
     public Object3D(double[][] vertex, int[][] triangles) {
         this(vertex, triangles, false);
     }  

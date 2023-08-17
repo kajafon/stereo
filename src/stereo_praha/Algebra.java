@@ -632,6 +632,13 @@ public class Algebra {
         return Math.sqrt(out);
     }
     
+    public static double sizeSqr(double[] x)
+    {
+        double out = 0;
+        for(double e : x) out += e*e;
+        return out;
+    }
+        
     public static double[] duplicate(double[] v)
     {
         double[] out = new double[v.length];
