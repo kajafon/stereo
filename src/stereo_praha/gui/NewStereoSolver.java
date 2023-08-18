@@ -6,6 +6,7 @@ import stereo_praha.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import stereo.to3d.Face;
 import stereo.to3d.FtrLink;
@@ -99,8 +100,12 @@ public class NewStereoSolver extends StereoTask {
     
     void copyOtherRays2(NewStereoSolver otherSolver) {        
         otherSolver.project();
+        copyOtherRays2(otherSolver.rays2);    
+    }
+    
+    void copyOtherRays2(Object3D other) {        
         otherRays2.setColor(Color.red);
-        otherRays2.copyTransformed_PlaceAtZero(otherSolver.rays2);
+        otherRays2.copyTransformed_PlaceAtZero(other);
         otherRays2.setEnabled(true);
     }
     
@@ -527,8 +532,6 @@ public class NewStereoSolver extends StereoTask {
         scene.project();
     }
     
-    /** scales the impulse to weaken or strengthen its effect */
-    public double impulseScaler = 1;
     
     /**
       apply on projected scene, need valid tmp_matrix of rays2 object
@@ -536,16 +539,39 @@ public class NewStereoSolver extends StereoTask {
     */    
     void __relax()
     {        
-//        copyOtherGold();
-        copyOtherRays2(otherSolvers.iterator().next());
-
-        scene.project();
         double[] tmp = new double[3];
-        Impulse impulse = new Impulse();
         
-        if (otherRays2.isEnabled()) {
-            impulse.init(distanceObject.size()*2);        
-            SpringInspiration.calcDistanceObjects(otherRays2, rays2, distanceObject, Color.RED);
+        ArrayList<Impulse> impulses = new ArrayList<>();
+        ArrayList<double[]> fixtures = new ArrayList<>();
+        ArrayList<Object3D> rayObjects = new ArrayList<>();
+        
+        
+        Iterator<NewStereoSolver> it = otherSolvers.iterator();
+        while(it.hasNext()) {
+            NewStereoSolver other = it.next();
+            other.project();
+            rayObjects.add(other.rays2);
+        }        
+
+        /** lets do our local rays1 as last -> the result will stay
+         *  in distance object and used for the gold calculation
+         */
+        rayObjects.add(rays1);
+        
+        for (Object3D rays : rayObjects) {
+            copyOtherRays2(rays);
+            project();
+
+            Impulse impulse = new Impulse();
+            impulses.add(impulse);
+            impulse.init(otherRays2.vertex.length);  
+
+
+            try {
+                SpringInspiration.calcDistanceObjects(otherRays2, rays2, distanceObject, Color.RED);
+            } catch(NullPointerException ex) {
+                ex.printStackTrace();
+            }
             scene.project();
             for(Object3D link : distanceObject) {            
                 /* add partial impulse that acts on the object ray2 in the point where the ray from ray2 is closest to 
@@ -553,49 +579,35 @@ public class NewStereoSolver extends StereoTask {
                    corresponding rays in the two sets of rays
                 */
                 impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
-            }             
-        } else {
-            impulse.init(distanceObject.size());
-        } 
-        
-        SpringInspiration.calcDistanceObjects(rays1, rays2, distanceObject, Color.RED);
-        scene.project();
-
-        /* impulse that is a combination of partial impulses where each of them 
-           represents an attractive force between corresponding rays. 
-        */
-
-        
-        for(Object3D link : distanceObject) {            
-            /* add partial impulse that acts on the object ray2 in the point where the ray from ray2 is closest to 
-               corresponding ray in ray1. this partial impulse materializes an idea of attractive force between
-               corresponding rays in the two sets of rays
-            */
-            impulse.add(link.transformed[1], Algebra.difference(link.transformed[0], link.transformed[1], tmp));
-        } 
-        
-
+            }   
+            
+            double[] fixture = new double[3];
+            fixRaysPosition(rays2, otherRays2, fixture);
+            fixtures.add(fixture);            
+        }
         
         
+        for(double[] f : fixtures) {
+            Algebra.addToPosition(ray2Subscene.matrix, f);            
+        }
         
+        for(Impulse imp : impulses) {
+            _applyImpulse(imp, impulses.size());
+        }
         
-//        if (otherGold.isEnabled()) {
-//            for(int i=0; i<gold.transformed.length; i++) {            
-//                
-//                /** impulse vector to tmp */
-//                Algebra.difference(otherGold.transformed[i], gold.transformed[i], tmp);
-//                Object3D link = distanceObject.get(i);
-//                Algebra.copy(gold.transformed[i], link.vertex[0]);
-//                Algebra.add(tmp, link.vertex[0], link.vertex[1]);
-//                impulse.add(gold.transformed[i], tmp);
-//            }             
-//        }
-
+//        System.out.println("fixture: " + Algebra.size(tmp));
+        System.out.println(" other gold:" + otherGold.isEnabled());
+        System.out.println(" other ray2:" + otherRays2.isEnabled());
+        
+    }    
+    
+    void _applyImpulse(Impulse impulse, double scale) {
         double[] rotationVec = impulse.getRotation(null);
         double[] translationVec = impulse.getTranslation(null);
-        Algebra.scale(rotationVec, impulseScaler, rotationVec);
-        Algebra.scale(translationVec, impulseScaler, translationVec);
+        Algebra.scale(rotationVec, scale, rotationVec);
+        Algebra.scale(translationVec, scale, translationVec);
         
+        double[] tmp = new double[3];
         /* now apply impulse rotation on ray2 in the impact center stored in tmp */
         impulse.getHitSpot(tmp);
         Algebra.subtractFromPosition(ray2Subscene.matrix, tmp);        
@@ -606,17 +618,7 @@ public class NewStereoSolver extends StereoTask {
         Algebra.addToPosition(ray2Subscene.matrix, translationVec);
                 
         fixRaysPosition(rays2, rays1, tmp);
-        Algebra.addToPosition(ray2Subscene.matrix, tmp);
-        
-        if (otherRays2.isEnabled()) {
-            fixRaysPosition(rays2, otherRays2, tmp);
-            Algebra.addToPosition(ray2Subscene.matrix, tmp);            
-        }
-        
-//        System.out.println("fixture: " + Algebra.size(tmp));
-        System.out.println(" other gold:" + otherGold.isEnabled());
-        System.out.println(" other ray2:" + otherRays2.isEnabled());
-        
-    }    
+        Algebra.addToPosition(ray2Subscene.matrix, tmp);        
+    }
 }
 

@@ -11,6 +11,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
@@ -308,11 +309,19 @@ public class ExperimentGui {
         NewStereoSolver solver2 = new NewStereoSolver(SampleObject.platforms(3),  -0.2, -0.25);
         ExperimentGui gui2 = new ExperimentGui(solver2);
         
+        NewStereoSolver solver3 = new NewStereoSolver(SampleObject.platforms(3),  0.2, -0.10);
+        ExperimentGui gui3 = new ExperimentGui(solver3);
+
         System.out.println("solvers equal:" + solver.equals(solver2));
         
         try {
             solver.addOtherSolver(solver2);
+            solver.addOtherSolver(solver3);
             solver2.addOtherSolver(solver);
+            solver2.addOtherSolver(solver3);
+            solver3.addOtherSolver(solver);
+            solver3.addOtherSolver(solver2);
+
         } catch(Exception e) {
             e.printStackTrace();
             return;
@@ -320,13 +329,12 @@ public class ExperimentGui {
         
         JPanel p = new JPanel();
         
-        p.setLayout(new GridLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
+        p.setLayout(new GridLayout(2,2));
         
-        gbc.gridx = gbc.gridy = 1;                
-        p.add(gui.createMainPanel(), gbc);
-        gbc.gridx += 1;                
-        p.add(gui2.createMainPanel(), gbc);
+                
+        p.add(gui.createMainPanel());
+        p.add(gui2.createMainPanel());
+        p.add(gui3.createMainPanel());
         
         GuiUtils.frameIt(p, 1100, 500, new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
