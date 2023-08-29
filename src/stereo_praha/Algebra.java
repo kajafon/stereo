@@ -143,7 +143,6 @@ public class Algebra {
                 m[i] = 0;
             }
         }
-
         return m;
     }
     /**
