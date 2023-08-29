@@ -149,7 +149,7 @@ public class PlaceOfAction_inspiration extends StereoTask {
         
         for(int i=0; i<orig_triangles.length; i++) {
             for(int j=0; j<orig_triangles[i].length; j++) { 
-                obj.triangles[i][j] = orig_triangles[i][j];
+                obj.polygons[i][j] = orig_triangles[i][j];
             }
         } 
         
@@ -287,7 +287,7 @@ public class PlaceOfAction_inspiration extends StereoTask {
         {
             gold = new Object3D(links.size(), 1, links.size());
         } else {
-            gold.init(links.size(), origin.triangles.length, origin.triangles[0].length);
+            gold.init(links.size(), origin.polygons.length, origin.polygons[0].length);
         }
         double error = 0;
         double sumx = 0;
@@ -342,11 +342,11 @@ public class PlaceOfAction_inspiration extends StereoTask {
             gold.vertex[i][2] -= sumz;
         }
 //        System.out.println("error:" + error);
-        for (int j=0; j<origin.triangles.length; j++)
+        for (int j=0; j<origin.polygons.length; j++)
         {
-            for (int i=0; i<origin.triangles[j].length; i++)
+            for (int i=0; i<origin.polygons[j].length; i++)
             {
-                gold.triangles[j][i] = origin.triangles[j][i];
+                gold.polygons[j][i] = origin.polygons[j][i];
             }
         }
         

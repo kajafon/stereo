@@ -173,7 +173,7 @@ public class GraphPanel extends JPanel
     boolean storeLimits;
     boolean suppressed = false;
     String title;
-    Color normalBackgrnd = getBackground();
+    Color normalBackgrnd;
 
     double minimum = Double.MIN_VALUE;
     double maximum = Double.MAX_VALUE;
@@ -245,7 +245,6 @@ public class GraphPanel extends JPanel
         graphNames.clear();
         maxValue = -1000000;
         minValue = 1000000;
-
     }
 
     public void addGraph(ArrayList<Double> graph, String name)
@@ -282,6 +281,10 @@ public class GraphPanel extends JPanel
         this.marks.add(mark);
     }
 
+    public void setColor(Color color) {
+        setBackground(color);
+    } 
+    
     void drawGraph(Graphics g, GraphInterface graph, double min, double max )
     {
         double xscale = (double) getWidth() / graph.length();
@@ -428,6 +431,15 @@ public class GraphPanel extends JPanel
             limits[0] -= diff*0.3;
             limits[1] += diff*0.3;
 
+            g.setColor(Color.gray);
+
+            int fontSize = 10;
+            g.setFont(new Font("arial", 0, fontSize));
+            String s = String.format("%.3f", min);
+            g.drawString(s, 0, getHeight()-fontSize);
+            s = String.format("%.3f", max);
+            g.drawString(""+s, 0, fontSize);
+            
             int i=0;
             for (GraphInterface gr:graphs)
             {
@@ -437,14 +449,6 @@ public class GraphPanel extends JPanel
                 drawGraph(g, gr, limits[0], limits[1]);
                 i++;
             }
-
-            g.setColor(Color.black);
-
-            String s = String.format("%.3f", min);
-            g.drawString(s, getWidth()-200, getHeight()-20);
-            s = String.format("%.3f", max);
-            g.drawString(""+s, getWidth()-200, 20);
-
         }
     }
 

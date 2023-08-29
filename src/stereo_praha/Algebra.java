@@ -129,7 +129,23 @@ public class Algebra {
 
         return m;
     }
+    
+    public static double[] clearRotation(double[] m) {
+        if (m == null) {
+            m = new double[16];
+        }
 
+        for (int i = 0, j = 0; i < 12; i++) {
+            if (i == j) {
+                m[i] = 1.0;
+                j += 5;
+            } else {
+                m[i] = 0;
+            }
+        }
+
+        return m;
+    }
     /**
      * m3 = m1 * m2
      *
@@ -456,7 +472,7 @@ public class Algebra {
      * @param x1
      * @param v2
      * @param x2
-     * @return [sqr(distance), p1.x, p1.y, p2.x, p2.y] // distance squared and points on lines 
+     * @return [sqr(distance), p1.x, p1.y, p1.z, p2.x, p2.y, p2.z] // distance squared and points on lines 
      */
     public static double[] linesDistanceSquare(double[] v1, double[] x1, double[] v2, double[] x2) {
         // if lines are not parallel. we want to find the smallest distance between them
@@ -465,7 +481,13 @@ public class Algebra {
         if (Math.abs(product[0]) + Math.abs(product[1]) + Math.abs(product[2]) < 0.0000001) {
             // lines are very close to parallel
 
-            double[] P2 = intersectionPlaneAndLine(v1, x1, v2, x2);
+            double[] P2 = null;
+            P2 = intersectionPlaneAndLine(v1, x1, v2, x2);
+            if (P2 == null) {
+                return new double[]{Double.POSITIVE_INFINITY,
+                Double.NaN, Double.NaN, Double.NaN, 
+                Double.NaN, Double.NaN, Double.NaN}; 
+            }
             P2[0] -= x1[0];
             P2[1] -= x1[1];
             P2[2] -= x1[2];
@@ -616,6 +638,13 @@ public class Algebra {
         return Math.sqrt(out);
     }
     
+    public static double sizeSqr(double[] x)
+    {
+        double out = 0;
+        for(double e : x) out += e*e;
+        return out;
+    }
+        
     public static double[] duplicate(double[] v)
     {
         double[] out = new double[v.length];
@@ -906,9 +935,13 @@ public class Algebra {
     }
     
     public static void setPosition(double[] matrix, double[] position) {
-        matrix[12] = position[0];
-        matrix[13] = position[1];
-        matrix[14] = position[2];        
+        setPosition(matrix, position[0], position[1], position[2]);        
+    }
+    
+    public static void setPosition(double[] matrix, double x, double y, double z) {
+        matrix[12] = x;
+        matrix[13] = y;
+        matrix[14] = z;        
     }
 
     public static void addToPosition(double[] matrix, double[] position) {
@@ -921,5 +954,11 @@ public class Algebra {
         matrix[12] -= position[0];
         matrix[13] -= position[1];
         matrix[14] -= position[2];        
+    }
+    
+    public static void clear(double[] v) {
+        for (int i=0; i<v.length; i++) {
+            v[i] = 0;
+        }
     }
 }

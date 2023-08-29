@@ -134,7 +134,7 @@ public class ImpulseGui {
         previewObject = new Object3D(object.vertex, lines);
         previewObject.setColor(Color.yellow);
         impulses = new Object3D(object.vertex.length * 2, object.vertex.length, 2);
-        impulses.triangles = impLines;
+        impulses.polygons = impLines;
         impulses.setColor(Color.red);
         
         applyPulls();

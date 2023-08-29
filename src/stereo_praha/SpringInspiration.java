@@ -12,9 +12,15 @@ public class SpringInspiration {
     public static Object3D objectFromProjection(double[][] projected, Object3D obj, double focalLength, double rayLength) {
         if (obj == null) {
             obj = new Object3D();
-        } else {
-            obj.init(projected.length + 1, projected.length, 2);
         }
+        
+        int sidesNum = projected.length;
+        if (sidesNum > 10) {
+            sidesNum = 10;
+        }
+        
+        obj.init(projected.length + 1, sidesNum, 2);
+        
         double[][] vectors = obj.vertex;
 
         for (int i = 0; i < projected.length; i++) {
@@ -27,12 +33,19 @@ public class SpringInspiration {
         vectors[vectors.length - 1][1] = 0;
         vectors[vectors.length - 1][2] = -focalLength;
 
-        int[][] tri = obj.triangles;
+        int[][] tri = obj.polygons;
+        
+        int di = projected.length / tri.length;
 
-        for (int i=0; i<projected.length; i++)
+        for (int i=0; i<tri.length; i++)
         {
+            int vi = i * di;
+            if (vi > obj.vertex.length) {
+                System.out.println("pica matka");
+                return null;
+            }
             tri[i][0] = vectors.length - 1;
-            tri[i][1] = i;
+            tri[i][1] = vi;
         }
         return obj;
     }
@@ -65,7 +78,6 @@ public class SpringInspiration {
 
             if (Double.isNaN(res[1])) {
                 System.out.println("invalid distance: " + res);
-                continue;
             }
 
             Object3D link;
@@ -85,8 +97,8 @@ public class SpringInspiration {
             link.vertex[1][1] = res[5];
             link.vertex[1][2] = res[6];
 
-            link.triangles[0][0] = 0;
-            link.triangles[0][1] = 1;
+            link.polygons[0][0] = 0;
+            link.polygons[0][1] = 1;
 
         }
 
