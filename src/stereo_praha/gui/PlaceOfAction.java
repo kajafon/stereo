@@ -9,6 +9,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
+/** 
+ * 
+ * @deprecated 
+ */
 public class PlaceOfAction {
     TowardsGlory problem = new TowardsGlory();
     double scale = 500;

@@ -695,36 +695,7 @@ public class NewStereoSolver extends StereoTask {
     public void setResultMatrix(double[] m) {
         Algebra.copy(m, ray2Subscene.matrix);
     }
-    
-    double[][] positions = new double[][] {
-        {1,  0  }, {-1,  0  },
-
-        {1,  0.3}, {-1,  0.3},
-        {1, -0.3}, {-1, -0.3},
-
-        {0.8,  0.5}, {-0.8,  0.5},
-        {0.8, -0.5}, {-0.8, -0.5},
-
-        {0.7,  0.7}, {-0.7,  0.7},
-        {0.7, -0.7}, {-0.7, -0.7},
-    };
-    
-    int probePosIndex = 0;
-    
-    public void setProbePosition() {
-        placeIt(positions[probePosIndex][0] * focalLength, positions[probePosIndex][1] * focalLength, 0);
-        scene.project();
-        
-        probePosIndex = (++probePosIndex) % positions.length;        
-    }
-    
-    void probes() {        
-        for (int i=0; i<positions.length; i++) {
-            placeIt(positions[i][0], positions[i][1], 0);
-            scene.project();            
-        }        
-    }
-    
+      
     public double getReconstructionError() {
         return reconstructionError;
     }

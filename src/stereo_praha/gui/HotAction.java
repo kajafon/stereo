@@ -25,7 +25,7 @@ import stereo_praha.Algebra;
 
 /**
  *
- * @author kajo
+ * @deprecated 
  */
 public class HotAction {
     

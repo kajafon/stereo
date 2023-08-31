@@ -16,6 +16,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import static stereo_praha.gui.FieldsOfError.basicScale;
 
+/** 
+ @deprecated 
+ */
 public class PlaceOfAction_inspiration extends StereoTask {
 
     double scale = 300;
