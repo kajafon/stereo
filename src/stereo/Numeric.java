@@ -190,13 +190,13 @@ public class Numeric
                 continue;
             
             int d2 = 0;
-            int x = e.p.get(1);
-            int d = x - e.p.get(0);
+            int x = e.x_coords.get(1);
+            int d = x - e.x_coords.get(0);
             int starti= d==D?0:1;
             int i;
             for (i=2; i<e.size(); i++)
             {
-                int x2 = e.p.get(i);
+                int x2 = e.x_coords.get(i);
                 d2 = x2 - x;
                 if (d2 == D && d != d2)
                 {
@@ -273,8 +273,7 @@ public class Numeric
      * @return 
      */
     public static ArrayList<Edge> vectorize(Greyscale greyscale, boolean vertical, int treshold, int lengthTrashhold)
-    {
-        
+    {        
         class Bmp
         {
             Greyscale g;
@@ -307,11 +306,11 @@ public class Numeric
         
         ArrayList<Edge> vectors = new ArrayList<Edge>();
         ArrayList<Edge> current = new ArrayList<Edge>();
-        ArrayList<Edge> newvcs = new ArrayList<Edge>();
+        ArrayList<Edge> newvcrs = new ArrayList<Edge>();
 
         for (int j=0; j<g.getHeight(); j++)
         {
-            newvcs.clear();
+            newvcrs.clear();
             for (int i=0; i<g.getWidth(); i++)
             {
                 short v = g.get(i, j);
@@ -350,7 +349,7 @@ public class Numeric
 
                     if (winner == null)
                     {
-                        newvcs.add(new Edge(maxi, j, max));
+                        newvcrs.add(new Edge(maxi, j, max));
                        // System.out.println(" -- new edge");
                     } else
                     {
@@ -371,14 +370,14 @@ public class Numeric
                 else
                 {
                     current.remove(k);
-                    if (v.p.size() < lengthTrashhold)
+                    if (v.x_coords.size() < lengthTrashhold)
                     {
                         vectors.remove(v);
                     }
                 }
             }
-            vectors.addAll(newvcs);
-            current.addAll(newvcs);
+            vectors.addAll(newvcrs);
+            current.addAll(newvcrs);
         }
         System.out.println("-- " + vectors.size());
         return vectors;

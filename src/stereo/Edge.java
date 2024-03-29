@@ -14,7 +14,7 @@ import java.util.ArrayList;
  */
 public class Edge
 {
-    ArrayList<Integer> p = new ArrayList<Integer>();
+    ArrayList<Integer> x_coords = new ArrayList<Integer>();
     ArrayList<Integer> grd = new ArrayList<Integer>();
     int startRow;
     
@@ -37,17 +37,17 @@ public class Edge
 
     public int getX(int i)
     {
-        return p.get(i);
+        return x_coords.get(i);
     }
 
     public int size()
     {
-        return p.size();
+        return x_coords.size();
     }
     
     public Edge split(int cut)
     {
-        if (cut < 0 || cut >= p.size()) return null;
+        if (cut < 0 || cut >= x_coords.size()) return null;
         
         Edge e = new Edge(this, cut);
         cutTail(cut);
@@ -57,9 +57,9 @@ public class Edge
 
     public void cutTail(int from)
     {
-        for (int i=p.size()-1; i>=from; i--)
+        for (int i=x_coords.size()-1; i>=from; i--)
         {
-            p.remove(i);
+            x_coords.remove(i);
             grd.remove(i);
         }        
     }
@@ -72,7 +72,7 @@ public class Edge
         startRow = source.startRow + from;
         for (int i=from; i<source.size(); i++)
         {
-            p.add(source.p.get(i));
+            x_coords.add(source.x_coords.get(i));
             grd.add(source.grd.get(i));
         }
         
@@ -80,7 +80,7 @@ public class Edge
     
     public Edge(int x1, int y, int grad)
     {
-        p.add(x1);
+        x_coords.add(x1);
         grd.add(grad);
         startRow = y;
     }
@@ -90,14 +90,14 @@ public class Edge
         if (alive) // already has a pixel on current scan line 
             return false;
 
-        int d = p.get(p.size() - 1) - xmax;
+        int distance = x_coords.get(x_coords.size() - 1) - xmax;
         
-        return d<=1 && d >=-1;
+        return distance<=1 && distance >=-1;
     }
 
     public void add(int xmax, int grad)
     {
-        p.add(xmax);
+        x_coords.add(xmax);
         grd.add(grad);
         alive = true;
     }

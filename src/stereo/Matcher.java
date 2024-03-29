@@ -36,7 +36,6 @@ public class Matcher
     {
         this.g1 = g1;
         this.g2 = g2;
-        this.stampSize = stampSize;
         b = new int[stampSize*stampSize];
         weight = new double[stampSize*stampSize];
         calcWeights();

@@ -4,8 +4,12 @@
  */
 package stereo;
 
+import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import javax.swing.JPanel;
+import stereo.poi.CircleRaster;
 
 /**
  *
@@ -581,14 +585,14 @@ public class Greyscale
             for (int i = 1; i < width-1; i++,adr++)
             {
                 if (px[adr] < thrsh) continue;
-                if (px[adr] <= px[adr-1      ]) continue;
-                if (px[adr] <= px[adr-1-width]) continue;
-                if (px[adr] <= px[adr  -width]) continue;
-                if (px[adr] <= px[adr+1-width]) continue;
-                if (px[adr] <= px[adr+1      ]) continue;
-                if (px[adr] <= px[adr+1+width]) continue;
-                if (px[adr] <= px[adr  +width]) continue;
-                if (px[adr] <= px[adr-1+width]) continue;
+                if (px[adr] < px[adr-1      ]) continue;
+                if (px[adr] < px[adr-1-width]) continue;
+                if (px[adr] < px[adr  -width]) continue;
+                if (px[adr] < px[adr+1-width]) continue;
+                if (px[adr] < px[adr+1      ]) continue;
+                if (px[adr] < px[adr+1+width]) continue;
+                if (px[adr] < px[adr  +width]) continue;
+                if (px[adr] < px[adr-1+width]) continue;
                
                 list.add(new int[]{i,j,px[adr]});
                 
@@ -597,6 +601,38 @@ public class Greyscale
         }
         return list;
     }
+    
+    public ArrayList<int[]> localMaxims_FAST(int cirRadius, double rn, int thrsh)
+    {
+        CircleRaster cir = new CircleRaster(cirRadius);
+        
+        int N = (int)(cir.length() * 0.75);
+        
+        ArrayList<int[]> list = new ArrayList<>();
+        for (int y=cirRadius; y<this.height-cirRadius; y++) {
+            for (int x = cirRadius; x < this.width - cirRadius; x++) {
+
+                int cnt = 0;
+                int I = px[x + y * this.width];
+                for (int i=0; i<cir.length() && cnt < N; i++) {
+                    int _x = x + cir.getX(i);
+                    int _y = y + cir.getY(i);
+                    int Ip = px[_x + _y * this.width];
+                    int dI = I - Ip;
+                    if (dI < -thrsh || dI > thrsh) {
+                        cnt++;
+                    } else {
+                        cnt = 0;
+                    }
+                }
+
+                if (cnt >= N) {
+                    list.add(new int[]{x,y});
+                }
+            }       
+        }
+        return list;
+    }    
 
     public BufferedImage createImage(BufferedImage img)
     {

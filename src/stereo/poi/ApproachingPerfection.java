@@ -7,6 +7,7 @@ package stereo.poi;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.TreeMap;
 import stereo.Edge;
 import stereo.Greyscale;
 import stereo.Histogram;
@@ -16,6 +17,7 @@ import stereo.Triangulator;
 import stereo.to3d.Face;
 import stereo.to3d.FaceMetric;
 import stereo.to3d.FtrLink;
+import stereo_praha.Algebra;
 
 /**
  *
@@ -25,13 +27,13 @@ public class ApproachingPerfection
 {
     BufferedImage img;
     BufferedImage grad;
-    ArrayList<Feature> features;
+    public ArrayList<Feature> features;
     ArrayList<int[]> maxims;
-    double[][]stampWeights;
+    public double[][]stampWeights;
     
-    Greyscale gs;
+    public Greyscale gs;
     Greyscale gsGrad;
-    int stampSize = 80;
+    public static int stampSize = 30;
     ArrayList[][] proxiGrid;
     double proximity = 0.3;
     int gridTileSize;
@@ -39,7 +41,7 @@ public class ApproachingPerfection
 
     public void setFaces(ArrayList<Face> faces) {
         this.faces = faces;
-    }
+    }    
     
     public ApproachingPerfection(BufferedImage img)
     {
@@ -50,12 +52,12 @@ public class ApproachingPerfection
         Greyscale.edgesFilter(proces.gs1, proces.gs2);
         proces.switchBmp();
 
-        proces.gs1.contrast(0, 50);
+        proces.gs1.contrast(0, 10);
 //        grad = proces.gs1.createImage(grad);
         Greyscale.smooth(proces.gs1, proces.gs2);
         proces.switchBmp();
-        Greyscale.smooth(proces.gs1, proces.gs2);
-        proces.switchBmp();
+//        Greyscale.smooth(proces.gs1, proces.gs2);
+//        proces.switchBmp();
         
         gsGrad = proces.gs1;
         gs = Greyscale.toGreyscale(img);        
@@ -94,15 +96,15 @@ public class ApproachingPerfection
     
     void calcMaxims()
     {
-        maxims = new ArrayList<int[]>(500);
-        gsGrad.localMaxims(maxims, 100);
+        maxims = gsGrad.localMaxims(maxims, 200);
+//        maxims = gsGrad.localMaxims_FAST(4, proximity, 50);        
     }
     
     void _calcMaxims()
     {
         
         long before = System.currentTimeMillis();
-        int valueTreshold = 30;
+        int valueTreshold = 250;
         int lengthTreshold = 5;
         
         ArrayList<Edge> edgesVerti = Numeric.vectorize(gsGrad, true, valueTreshold, lengthTreshold);
@@ -156,89 +158,94 @@ public class ApproachingPerfection
         return grad;
     }
     
-    
-
-    
-    public ArrayList<FtrLink> findLinks_withProxymity(ApproachingPerfection thing)
+    public ArrayList<FtrLink> findLinks_withProxymity(ApproachingPerfection other)
     {
         long before = System.currentTimeMillis();
         ArrayList<FtrLink> links = new ArrayList<FtrLink>();
         System.out.println("finding links...");
+        
         for (Feature f:features)
         {
-            FtrLink l = null;
-            int gridi=f.x/thing.gridTileSize;
-            int gridj=f.y/thing.gridTileSize;
+            int gridi=f.x/other.gridTileSize;
+            int gridj=f.y/other.gridTileSize;
+            
+            TreeMap<Double, Feature> localLinks = new TreeMap<>();
             
             for (int i=gridi-1; i<gridi+1; i++)
             {
                 if (i<0) continue;
-                if (i>=thing.proxiGrid.length)
+                if (i>=other.proxiGrid.length)
                     break;
                 for (int j=gridj-1;j<gridj+1; j++)
                 {
                     if (j<0) continue;
-                    if (j>=thing.proxiGrid[0].length)
+                    if (j>=other.proxiGrid[0].length)
                         continue;
                     
                     if (i==12 || j==12)
                         System.out.println("kokot");
-                    for (Object o:thing.proxiGrid[i][j])
+                    for (Object o:other.proxiGrid[i][j])
                     {
                         Feature f2 = (Feature)o;
-                        double e = compare(f, f2);
-                        if (e < 0.5 && (l == null || e < l.e))
-                        {
-                            l = new FtrLink(f,f2,e);
+                        double e = Feature.compare(f, f2, stampWeights);
+                        localLinks.put(e, f2);
+                        if (localLinks.size() > 5) {
+                            localLinks.pollLastEntry();
                         }
                     }
                 }
             }
             
-            if (l != null)
-               links.add(l);
+            FtrLink l = new FtrLink(f, null, 0);            
+            l.candidates = new ArrayList<>();
+            for (Feature _f : localLinks.values()) {
+                l.candidates.add(_f);
+            }
+            links.add(l);
         }
         
         System.out.println("found " + links.size() + " links in " + (System.currentTimeMillis() - before) + " ms");
-        
-        killMaveriks(links);
-        
-        
+       
         return links;
         
     }
     
-    public ArrayList<FtrLink> findLinks(ApproachingPerfection thing)
+    public ArrayList<FtrLink> findLinks(ApproachingPerfection other)
     {
         long before = System.currentTimeMillis();
         ArrayList<FtrLink> links = new ArrayList<FtrLink>();
         System.out.println(" finding links...");
         for (Feature f:features)
         {
-            FtrLink l = null;
-            for (Feature f2:thing.features)
+            TreeMap<Double, Feature> localLinks = new TreeMap<>();
+
+            for (Feature f2:other.features)
             {
-                double e = compare(f, f2);
-                if (e < 0.5 && (l == null || e < l.e))
+                double e = Feature.compare(f, f2, stampWeights);
+                localLinks.put(e, f2);
+                if (localLinks.size() > 5)
                 {
-                    l = new FtrLink(f,f2,e);
+                    localLinks.pollLastEntry();
                 }
             }
-            if (l != null)
-               links.add(l);
+            
+            FtrLink l = new FtrLink(f, localLinks.firstEntry().getValue(), 0);
+            l.candidates = new ArrayList<>();
+            for (Feature _f : localLinks.values()) {
+                l.candidates.add(_f);
+            }
+            
+            links.add(l);
         }
-        
         System.out.println("found " + links.size() + " links in " + (System.currentTimeMillis() - before) + " ms");
-        
-        killMaveriks(links);
-        
-        
         return links;
-        
     }
     
     void killMaveriks(ArrayList<FtrLink> links)
     {
+        if (links.size() == 0) {
+            return;
+        }
       //----- statistics to remove crazy maveriks links accross the image span
         long before = System.currentTimeMillis();
         int driftx = 0;
@@ -307,28 +314,24 @@ public class ApproachingPerfection
     private ArrayList<Feature> buildFeatures(ArrayList<int[]> maxims, Greyscale g)
     {
         System.out.println("building " + maxims.size() + " features.");
-        ArrayList<Feature> feat = new ArrayList<Feature>();
+        ArrayList<Feature> features = new ArrayList<Feature>();
         
         for (int[] m:maxims)
         {
-            feat.add(buildFeature(m[0], m[1]));
+            features.add(buildFeature(m[0], m[1]));
         }
         
-        return feat;
+        return features;
     }
     
     public Feature buildFeature(int x0, int y0)
     {
         int[] midVal = new int[1];
-        int[] midVal2 = new int[1];
         double[][] stamp1 = buildStamp(gs, x0, y0, stampSize, stampWeights, midVal);
-        double[][] stamp2 = buildStamp(gsGrad, x0, y0, stampSize, stampWeights, midVal2);
         
         Feature f = new Feature(x0, y0);
         f.stamp = stamp1;
-        f.stamp2 = stamp2;
         f.midValue = midVal[0];
-        f.midValue2 = midVal2[0];
         
         return f;
     }
@@ -336,14 +339,12 @@ public class ApproachingPerfection
     public static double[][] buildStamp(Greyscale g, int x0, int y0, int stampSize, double[][] stampWeights, int[] midValPtr)
     {
         int x1 = x0 - stampSize/2;
-     //   int x2 = x1 + stampSize;
         int y1 = y0 - stampSize/2;
-     //   int y2 = y1 + stampSize;
 
         double [][] stamp = new double[stampSize][stampSize];
-        int center = 0;
+        double center = 0;
         int count = 0;
-        
+        double weightSum = 0; 
         for (int j=0; j<stampSize; j++)
         {
             int y = y1 + j;
@@ -356,7 +357,8 @@ public class ApproachingPerfection
                 if (x < 0 || x >= g.width)
                     continue;
                 
-                center += g.get(x, y);
+                weightSum += stampWeights[j][i];
+                center += g.get(x, y) * stampWeights[j][i];
                 count ++;
             }
         }
@@ -364,7 +366,8 @@ public class ApproachingPerfection
         if (count == 0)
             return null;
         
-        center /= count;
+        center /= weightSum;
+//        center /= count;
         
         double dev = 0;
         
@@ -407,32 +410,8 @@ public class ApproachingPerfection
             }
         }
         if (midValPtr != null)
-            midValPtr[0] = center;
+            midValPtr[0] = (int)center;
         return stamp;
-    }
-     
-    public static double compare(Feature f1, Feature f2)
-    {
-        double e = 0;
-        double e2 = 0;
-        for (int j=0; j<f1.stamp.length; j++)
-        {
-            for (int i=0; i<f1.stamp[0].length; i++)
-            {
-                double v = f1.stamp[j][i] - f2.stamp[j][i];
-                e += v*v;
-                v = f1.stamp2[j][i] - f2.stamp2[j][i];
-                e2 += v*v;
-            }
-        }
-        
-        e  /= f1.stamp.length*f1.stamp[0].length;
-        e2 /= f1.stamp.length*f1.stamp[0].length;
-        
-        double e3 = Math.abs((double)f1.midValue - f2.midValue)/(f1.midValue + f2.midValue);
-        double e4 = Math.abs((double)f1.midValue2 - f2.midValue2)/(f1.midValue2 + f2.midValue2);
-        e = 1-(1-e)*(1-e2)*(1-e3)*(1-e4);
-        return e;
     }
     
     public static Histogram calcLinkAngleHistogram(ArrayList<FtrLink> list)
@@ -477,21 +456,25 @@ public class ApproachingPerfection
         
         Triangulator.LinkAccess la = new Triangulator.LinkAccess() 
         {
+            @Override
             public int x1(Object o)
             {
                 return ((FtrLink)o).f1.x;
             }
 
+            @Override
             public int x2(Object o)
             {
                 return ((FtrLink)o).f2.x;
             }
 
+            @Override
             public int y1(Object o)
             {
                 return ((FtrLink)o).f1.y;
             }
 
+            @Override
             public int y2(Object o)
             {
                 return ((FtrLink)o).f2.y;
@@ -502,9 +485,75 @@ public class ApproachingPerfection
         return faceList;
     }
     
-
+    public static void faceDescriptor(int x1, int y1, int x2, int y2, int x3, int y3, double[] target) {
+        double s1 = Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+        double s2 = Math.sqrt((x3-x2)*(x3-x2) + (y3-y2)*(y3-y2));
+        double s3 = Math.sqrt((x3-x1)*(x3-x1) + (y3-y1)*(y3-y1));
+        double s = s1 + s2 + s3;
+        if (s == 0) {
+            target[0] = target[1] = target[2] = 0;
+            return;
+        }
+        
+        target[0] = s1/s;
+        target[1] = s2/s;
+        target[2] = s3/s;        
+    }
     
-    
-    
-    
+    public static void pickWinners( ArrayList<FtrLink> links, ArrayList<Face> faces) {
+        
+        double[] d1 = new double[3];
+        double[] d2 = new double[3];
+        
+        for (int i=0; i<faces.size(); i++) {
+            Face face = faces.get(i);
+            
+            FtrLink l1 = links.get(face.r1);
+            FtrLink l2 = links.get(face.r2);
+            FtrLink l3 = links.get(face.r3);
+            
+            faceDescriptor(l1.f1.x, l1.f1.y, l2.f1.x, l2.f1.y, l3.f1.x, l3.f1.y, d1);
+            
+            double _s = Algebra.size(d1);
+            if (_s == 0) {
+                continue;
+            }
+            
+            Algebra.scale(d1, 1.0/_s);
+            
+            double max = 0;
+            Feature f1max = null;
+            Feature f2max = null;
+            Feature f3max = null;
+            
+            for (Feature f1:l1.candidates) {
+                for (Feature f2:l2.candidates) {
+                    for (Feature f3:l3.candidates) {
+                        faceDescriptor(f1.x, f1.y, f2.x, f2.y, f3.x, f3.y, d2);
+                        double _s2 = Algebra.size(d2);
+                        if (_s2 == 0) {
+                            continue;
+                        }
+                        
+                        double w = Algebra.scalarValue(d1, d2);
+                        w /= _s;                    
+                        if (w > max) {
+                            max = w;
+                            f1max = f1;
+                            f2max = f2;
+                            f3max = f3;
+                        }
+                    }
+                }                
+            }
+            
+            if (max > 0) {
+                l1.f2 = f1max;
+                l2.f2 = f2max;
+                l3.f2 = f3max;
+            }   
+            
+            System.out.println("face " + i + " / " + faces.size());
+        }        
+    }
 }

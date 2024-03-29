@@ -65,7 +65,7 @@ public class Outline
         
         int y = edge.startRow;
 
-        for (int x:edge.p)
+        for (int x:edge.x_coords)
         {
             if (yScan)
                 p.add(new Point(x, y));

@@ -8,11 +8,15 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import javax.swing.AbstractAction;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import stereo.ui.GuiUtils;
 
 /**
  *
@@ -61,127 +65,111 @@ public class CircleRaster
         coords[i][1] = y;
     }
     
-    private void calcCoords(int r)
+    private void calcCoords(int radius)
     {
-        ArrayList<int[]> temp = new ArrayList<int[]>();
-        int x = r, y = 0;
-        int xChange = 1 - (r << 1);
-        int yChange = 0;
-        int radiusError = 0;
+        double sqrRad = radius * radius;
 
+        int segment_steps_cnt = (int)Math.round(radius / Math.sqrt(2));
         
-        while (x >= y)
-        {
-            temp.add(new int[]{x, y});
-            
-            y++;
-            radiusError += yChange;
-            yChange += 2;
-            if (((radiusError << 1) + xChange) > 0)
-            {
-                x--;
-                radiusError += xChange;
-                xChange += 2;
-            }
-           
-        }  
+        ArrayList<int[]> seg1 = new ArrayList<>();
+        ArrayList<int[]> seg2 = new ArrayList<>();
         
-        int arcSize = temp.size();
-        int doubleArc = 2*arcSize-1 - (r&1);
-        coords = new int[4*doubleArc][2];
-        for(int i=0; i<temp.size(); i++)
-        {
-            int[] c = temp.get(i);
-            x = c[0];
-            y = c[1];
-            
-            setCoord(i, x, y);
-            
-            if (i>0) setCoord(doubleArc - i, y, x);
-            setCoord(doubleArc + i, -y, x);
-
-            if (i>0) setCoord(2*doubleArc - i, -x, y);
-            setCoord(2*doubleArc + i, -x, -y);
-            
-            
-            if (i>0) setCoord(3*doubleArc - i, -y, -x);
-            setCoord(3*doubleArc + i, y, -x);
-
-            if (i>0) setCoord(4*doubleArc - i, x, -y);
-            
+        
+        int y_stop = 0;
+        for (int x=0; x<segment_steps_cnt; x++) {
+            y_stop = (int)Math.round(Math.sqrt(sqrRad - x*x));
+            seg1.add(new int[]{x, -y_stop});
+        }
+        
+        for (int y=1; y<y_stop; y++) {            
+            int x = (int)Math.round(Math.sqrt(sqrRad - y*y));
+            if (x < segment_steps_cnt) {
+                break;
+            }            
+            seg2.add(new int[]{x, -y});
+        }       
+        
+        for (int i=seg2.size()-1; i>=0; i--) {
+            seg1.add(seg2.get(i));
         }
 
+        int steps_quarter = seg1.size();
+        int[][] result = new int[steps_quarter*4][2];
+        for (int i=0; i<seg1.size(); i++) {            
+            result[i][0] = seg1.get(i)[0]; 
+            result[i][1] = seg1.get(i)[1]; 
+        }
         
-    }
-    
-    public static void main(String[] args)
-    {
-        
-        final CircleRaster raster = new CircleRaster(11);
-        final int[] indx = new int[1];
-        final JPanel panel = new JPanel()
-        {
+        for (int i=0; i<steps_quarter; i++) {            
+            int _x = result[i][0];
+            int _y = result[i][1];
+         
+            int tmp = _x;
+            _x = -_y;
+            _y = tmp;
             
+            int index = i+steps_quarter;
+            result[index][0] = _x;
+            result[index][1] = _y;
+            
+            tmp = _x;
+            _x = -_y;
+            _y = tmp;
+            
+            index = i+2*steps_quarter;
+            result[index][0] = _x;
+            result[index][1] = _y;
+            
+            tmp = _x;
+            _x = -_y;
+            _y = tmp;
+            
+            index = i+3*steps_quarter;
+            result[index][0] = _x;
+            result[index][1] = _y;
+        }
+        
+        coords = result;
+    }
 
+    public static void main(String[] args){
+        
+        CircleRaster cir = new CircleRaster(6);        
+        
+        int a = 10;
+        
+        final int[] index = new int[1];
+        
+        JPanel p = new JPanel() {
             @Override
-            protected void paintComponent(Graphics g)
-            {
+            protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 
-
+                int xs = getWidth()/2;
+                int ys = getHeight() / 2;
                 
-                int size = getWidth()/(raster.radius*2+5);
-                if (size == 0)
-                    size = 1;
-                if (size > 20)
-                    size = 20;
+                g.setColor(Color.gray);
                 
-                int x0 = raster.radius*size + size;
-                int y0 = raster.radius*size + size;
-                    
-                
-                for (int i=0; i<raster.length(); i++)
-                {
-                    int s = size;
-                    if (i==indx[0]%raster.length())
-                    {
-                        g.setColor(Color.RED);
-                        s+=2;
+                for (int i=0; i<cir.length(); i++) {                    
+                    if (index[0] == i) {
+//                        System.out.println("i:" + index[0] + ": " + circle[i][0] + ", " + circle[i][1]);
+                        g.drawRect(xs + cir.getX(i)*a - 2, ys + cir.getY(i)*a - 2, a+2, a+2);                    
                     }
-                    else
-                        g.setColor(Color.BLACK);
-                    
-                    int x = raster.getX(i)*size + x0;
-                    int y = raster.getY(i)*size + y0;
-                    
-                    g.drawRect(x - s/2, y - s/2, s, s);
-                }
-            }
+                    g.fillRect(xs + cir.getX(i)*a, ys + cir.getY(i)*a, a-2, a-2);                    
+                }                
+            }            
         };
         
-        panel.addMouseListener(new MouseAdapter()
-        {
-
+        JButton b = new JButton(new AbstractAction("F!") {
             @Override
-            public void mousePressed(MouseEvent e)
-            {
-                indx[0]++;
-                panel.repaint();
-            }
-            
+            public void actionPerformed(ActionEvent arg0) {
+                index[0] = (index[0]+1) % cir.length();
+                p.repaint();
+            }            
         });
-                   
-        JFrame frame = new JFrame();
-        frame.getContentPane().setLayout(new BorderLayout());
-//        frame.getContentPane().add(new JLabel(new ImageIcon(img)));
-        frame.getContentPane().add(panel, BorderLayout.CENTER);
-        frame.pack();
-        frame.setLocation(100, 100);
-        frame.setSize(new Dimension(100, 100));
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
         
-    }
-    
-    
+        p.add(b);
+        
+        GuiUtils.frameIt(p, 400, 700, null);
+    }    
 }

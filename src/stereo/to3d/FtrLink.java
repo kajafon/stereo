@@ -4,6 +4,8 @@
  */
 package stereo.to3d;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import stereo.poi.Feature;
 
 /**
@@ -16,7 +18,8 @@ public class FtrLink
     public Feature f1;
     public Feature f2;
     public double e;
-
+    public ArrayList<Feature> candidates;
+    
     public FtrLink(Feature f1, Feature f2, double e)
     {
         this.f1 = f1;
