@@ -1,6 +1,7 @@
 package stereo_praha;
 
 import java.util.ArrayList;
+import stereo.Greyscale;
 import stereo_praha.gui.Object3D;
 import stereo_praha.gui.stuff3D;
 
@@ -1013,5 +1014,74 @@ public class Algebra {
         for (int i=0; i<v.length; i++) {
             v[i] = 0;
         }
+    }
+    
+    static double G = 1.0 / Math.sqrt(2*Math.PI);
+    public static double gaussValue(double x, double sigma, double mid) {
+        double w = (x - mid)/sigma;
+        double exp = - 0.5 * w * w;
+        double res = G / sigma * Math.pow(Math.E, exp);
+        return res;        
+    }
+    
+    public static double[][] createGausian(double sigma) {
+        
+        int size = (int)(sigma*2.5);
+        double[][] gauss = new double[size][];
+        double sum = 0;
+        for (int j=0; j<size; j++) {
+            double[] row = new double[size];            
+            gauss[j] = row;
+            for (int i=0; i<size; i++) {
+                double t = Math.sqrt((i-size/2)*(i-size/2) + (j-size/2)*(j-size/2));
+                double gv = gaussValue(size/2 - t, sigma, size/2);
+                row[i] = gv;
+                sum += gv;
+            }            
+        }
+        double sum2 = 0;        
+        for (int j=0; j<size; j++) {
+            for (int i=0; i<size; i++) {
+                gauss[j][i] /= sum;                
+                sum2 += gauss[j][i];
+            }
+        }
+        
+        System.out.println("sum:" + sum2);
+        return gauss;        
+    }
+    
+    public static void apply(Greyscale src, Greyscale dst, double[][]kernel) {
+        
+        int kHalf = kernel.length/2;
+        for (int y=0; y < src.height; y++) {            
+            for (int x=0; x < src.width; x++) {
+                double sum = 0;
+                for (int j=0; j<kernel.length; j++) {
+                    int _y = y + j - kHalf;
+                    if (_y < 0) {
+                        continue;
+                    }
+                    if (_y >= src.height) {
+                        break;
+                    }
+                    for (int i=0; i<kernel.length; i++) {
+                        int _x = x + i - kHalf;                        
+                        if (_x < 0) {
+                            continue;
+                        }
+                        if (_x >= src.width) {
+                            break;
+                        }
+                        
+                        double w = kernel[j][i];
+                        double v = src.px[_y*src.width + _x];
+                        v *= w;
+                        sum += v;                        
+                    }                    
+                }
+                dst.px[y*dst.width + x] = (short)sum;
+            }        
+        }        
     }
 }

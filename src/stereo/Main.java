@@ -17,16 +17,20 @@ import java.util.Map;
 import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import stereo.poi.ApproachingPerfection;
+import stereo.poi.ApproachingPerfection_sift;
 import stereo.to3d.Face;
 import stereo.to3d.FaceMetric;
 import stereo.ui.GuiUtils;
 import stereo.ui.LinkPane;
+import stereo.ui.LinkPane_sift;
 import stereo.ui.Manual;
+import stereo_praha.Algebra;
 import stereo_praha.gui.GraphPanel;
 import stereo_praha.gui.PlaceOfAction_inspiration;
 import stereo_praha.gui.StereoSolver;
@@ -40,13 +44,41 @@ public class Main
         
     public static void main(String[] args)
     {        
-        links();
+        sift();
+//        gauss();
+//        links();
 //        manual();
         
         // -----------------------------------------
 
     }
-         
+    
+    public static void gauss() {
+        GraphPanel gpanel = new GraphPanel();
+        
+        int size = 10;
+        int sigma = 10;
+        double[] g = new double[size];
+        for (int i=0; i<size; i++) {
+            g[i] = Algebra.gaussValue(i, sigma, 4);            
+        }
+        
+        gpanel.addGraph(g, "gauss");
+        double[][] gaussian = Algebra.createGausian(sigma);
+        Greyscale gs = new Greyscale(gaussian.length, gaussian.length);
+        
+        for (int j=0; j<gs.height; j++) {
+            for (int i=0; i<gs.width; i++) {
+                double w = gaussian[j][i];
+                w *= 100000;
+                gs.px[j*gs.width + i] = (short)(w);                
+            }            
+        }
+        BufferedImage img = gs.createImage(null);
+        
+        GuiUtils.frameIt(new JLabel(new ImageIcon(img)), 700, 300, null);
+    }
+    
     public static void links()
     {
         System.out.println("={links}=");
@@ -111,6 +143,41 @@ public class Main
 //           }
 //        
 //        }));
+        
+        JFrame frame = new JFrame();
+        frame.getContentPane().setLayout(new BorderLayout());
+//        frame.getContentPane().add(new JLabel(new ImageIcon(img)));
+        frame.getContentPane().add(linkPane, BorderLayout.CENTER);
+//        frame.getContentPane().add(histoPanel, BorderLayout.SOUTH);
+        frame.pack();
+        frame.setSize(1100, 600);
+        frame.setLocation(100, 100);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);        
+    }
+
+         
+    public static void sift()
+    {
+        System.out.println("={links}=");
+        
+        final BufferedImage img1;
+        final BufferedImage img2;
+        try
+        {
+           img1 = ImageIO.read(new File("./umna1.jpg"));
+           img2 = ImageIO.read(new File("./umna2.jpg"));
+        } catch(IOException e)
+        {
+            e.printStackTrace();
+            return;
+        }        
+        
+       
+        ApproachingPerfection_sift perfect1 = new ApproachingPerfection_sift(img1);
+        ApproachingPerfection_sift perfect2 = new ApproachingPerfection_sift(img2);
+        
+        LinkPane_sift linkPane = new LinkPane_sift(perfect1, perfect2, null);
         
         JFrame frame = new JFrame();
         frame.getContentPane().setLayout(new BorderLayout());

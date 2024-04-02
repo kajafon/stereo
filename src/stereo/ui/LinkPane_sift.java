@@ -31,6 +31,7 @@ import stereo.poi.Cntx2;
 import stereo.Greyscale;
 import stereo.RelationProcessor;
 import stereo.poi.ApproachingPerfection;
+import stereo.poi.ApproachingPerfection_sift;
 import stereo.poi.SiftStamp;
 import stereo.to3d.FtrLink;
 import stereo.poi.Feature;
@@ -42,7 +43,7 @@ import stereo_praha.Algebra;
  *
  * @author karol presovsky
  */
-public class LinkPane extends JPanel
+public class LinkPane_sift extends JPanel
 {
     Point poi1;
     Point poi2;
@@ -50,8 +51,8 @@ public class LinkPane extends JPanel
 //    int poiViewSize = 50;
     double errScale;
     double minErr;
-    ApproachingPerfection thing1;
-    ApproachingPerfection thing2;
+    ApproachingPerfection_sift thing1;
+    ApproachingPerfection_sift thing2;
     ArrayList<FtrLink> links;
     ArrayList<Face> faceList;
     FtrLink currentLink = null;    
@@ -59,6 +60,8 @@ public class LinkPane extends JPanel
     JLabel view2;
     JLabel view3;
     JLabel view4;
+    JLabel view5;
+    JLabel view6;
     boolean showLinks = true;
     boolean showFaces = true;
     boolean showMaxims = true;
@@ -69,48 +72,78 @@ public class LinkPane extends JPanel
     Point target2 = null;
     int stampViewSize = 100;
     StampView stampView = new StampView(stampViewSize);
+    int currenStep = 0;
+    int imgWidth = 300;
 
     public void setFaceList(ArrayList<Face> faceList)
     {
         this.faceList = faceList;
     }
-            
-    public LinkPane(ApproachingPerfection thing1, ApproachingPerfection thing2, ArrayList<FtrLink> links)
+
+    ImageIcon createGuiImage(Greyscale gs) {
+        Image img = gs.createImage(null);
+        double scale = (double)imgWidth / img.getWidth(null);
+        img = img.getScaledInstance(imgWidth, (int)(img.getHeight(null)*scale), 0);
+        return new ImageIcon(img);
+    }
+    
+    void getStep(int i) {
+        System.out.println("getting step " + currenStep);
+        Greyscale[] gss = this.thing1.getStep(i);
+        if (gss != null) {
+            view1.setIcon(createGuiImage(gss[0]));
+            view2.setIcon(createGuiImage(gss[1]));
+            view3.setIcon(createGuiImage(gss[2]));
+        }
+        gss = this.thing2.getStep(i);
+        if (gss != null) {
+            view4.setIcon(createGuiImage(gss[0]));
+            view5.setIcon(createGuiImage(gss[1]));
+            view6.setIcon(createGuiImage(gss[2]));
+        }
+        
+        revalidate();
+        repaint();
+    }
+    
+    public LinkPane_sift(ApproachingPerfection_sift thing1, ApproachingPerfection_sift thing2, ArrayList<FtrLink> links)
     {
         setFocusable(true);
-        view1 = new JLabel(new ImageIcon(thing1.getImg()));
-        view2 = new JLabel(new ImageIcon(thing2.getImg()));
-        view3 = new JLabel(new ImageIcon(thing1.getGrad()));
-        view4 = new JLabel(new ImageIcon(thing2.getGrad()));
         
-        Dimension d = new Dimension(300,300);
+        Dimension dim = new Dimension(imgWidth, 200);
+        JLabel lab = null;
+        lab = view1 = new JLabel(); lab.setPreferredSize(dim); lab.setBorder(new LineBorder(Color.red, 1));
+        lab = view2 = new JLabel(); lab.setPreferredSize(dim); lab.setBorder(new LineBorder(Color.red, 1));
+        lab = view3 = new JLabel(); lab.setPreferredSize(dim); lab.setBorder(new LineBorder(Color.red, 1));
+        lab = view4 = new JLabel(); lab.setPreferredSize(dim); lab.setBorder(new LineBorder(Color.red, 1));
+        lab = view5 = new JLabel(); lab.setPreferredSize(dim); lab.setBorder(new LineBorder(Color.red, 1));
+        lab = view6 = new JLabel(); lab.setPreferredSize(dim); lab.setBorder(new LineBorder(Color.red, 1));
         
-//        view1.setPreferredSize(d);
-//        view2.setPreferredSize(d);
-//        view3.setPreferredSize(d);
-//        view4.setPreferredSize(d);
-        
+    
         this.links = links;
         this.thing1 = thing1;
         this.thing2 = thing2;
       
         add(view1);
         add(view2);
-//        add(view3);
-//        add(view4);
-        add(stampView);
+        add(view3);
+        add(view4);
+        add(view5);
+        add(view6);
+        
+        getStep(0);
         
         addMouseMotionListener(new MouseAdapter() 
         {
             @Override
             public void mouseMoved(MouseEvent me)
             {
-                if (LinkPane.this.links != null) {
+                if (LinkPane_sift.this.links != null) {
                     spot = me.getPoint();
 
                     int x = spot.x - view1.getX();
                     int y = spot.y - view1.getY();
-                    for (FtrLink l:LinkPane.this.links)
+                    for (FtrLink l:LinkPane_sift.this.links)
                     {
                         if (Math.abs(l.f1.x - x) + Math.abs(l.f1.y - y) < 10)
                         {
@@ -127,46 +160,37 @@ public class LinkPane extends JPanel
             @Override
             public void mouseClicked(MouseEvent evt) {
                 Point p = evt.getPoint();
-                int x = p.x - view2.getX();
-                int y = p.y - view2.getY();
-                
-//                System.out.println("button: " + evt.getButton());
-                if (x >= 0 && x < view2.getWidth() && 
-                    y >= 0 && y < view2.getHeight()) {
-                    
-                    double dist = Double.MAX_VALUE;
-                    
-                    if (evt.getButton() == 2) {
-                        for (Feature f : thing2.features) {
-                            double d = (f.x-x)*(f.x-x)+(f.y-y)*(f.y-y);
-                            if (d < dist) {
-                                target2 = new Point(f.x, f.y);
-                                shiftx = 0;
-                                shifty = 0;
-                                
-                                dist = d;
-                            }                            
-                        }                        
-                    } else {
-                        target2 = new Point(x,y);       
-                    }
+//                int x = p.x - view2.getX();
+//                int y = p.y - view2.getY();
+//                
+////                System.out.println("button: " + evt.getButton());
+//                if (x >= 0 && x < view2.getWidth() && 
+//                    y >= 0 && y < view2.getHeight()) {
+//                    
+//                    double dist = Double.MAX_VALUE;
+//                    target2 = new Point(x,y);       
+//    
+//                    setStampsToView();                    
+//                    double h = thing1.gs.getHessianTest(x, y);                    
+//                    System.out.println("hessian: " + h);                    
+//                    return;
+//                }
 
-                    setStampsToView();                    
-                    return;
-                }
-
-                x = p.x - view1.getX();
-                y = p.y - view1.getY();
-                
-                if (x >= 0 && x < view1.getWidth() && 
-                    y >= 0 && y < view1.getHeight()) {
-                    
-                    target1 = new Point(x,y);       
-                    shiftx = 0;
-                    shifty = 0;
-
-                    setStampsToView();
-                } 
+//                int x = p.x - view1.getX();
+//                int y = p.y - view1.getY();
+//                
+//                if (x >= 0 && x < view1.getWidth() && 
+//                    y >= 0 && y < view1.getHeight()) {
+//                    
+//                    double[] h = thing1.gs.calcSubPeak(x, y);                    
+//                    System.out.println("subpeak: " + h[0] + ", " + h[1]);       
+//                    
+//                    
+//
+//                    target1 = new Point(x,y);       
+//                    shiftx = 0;
+//                    shifty = 0;
+//                } 
 
             }
         });
@@ -197,70 +221,32 @@ public class LinkPane extends JPanel
                         repaint();
                         break;                      
                     case KeyEvent.VK_T: 
-                        if (currentLink != null) {
-                             
-                            target1 = new Point(currentLink.f1.x, currentLink.f1.y);
-                            
-                            if (targettedLink != currentLink) {
-                                targettedLink = currentLink;
-                                trgt2Index = 0;                                
-                            } else {
-                                trgt2Index = (trgt2Index + 1)%currentLink.candidates.size();                                
-                            }
-                            
-                            Feature f = currentLink.candidates.get(trgt2Index);
-                            target2 = new Point(f.x, f.y);
-                            shiftx = 0;
-                            shifty = 0;
-                            
-                            setStampsToView();
-                        }
+
                         break;  
                     case KeyEvent.VK_LEFT:
-                        shiftx-=1;
-                        setStampsToView();
+                        currenStep-=1;
+                        if (currenStep<0) {
+                            currenStep = 0;
+                        }
+                        getStep(currenStep);
                         break;
                     case KeyEvent.VK_RIGHT:
-                        shiftx+=1;
-                        setStampsToView();
+                        currenStep+=1;
+                        if (currenStep >= thing1.stepsCount()) {
+                            currenStep = thing1.stepsCount()-1;
+                        }
+                        getStep(currenStep);
                         break;
-                    case KeyEvent.VK_UP:
-                        shifty-=1;
-                        setStampsToView();
-                        break;
-                    case KeyEvent.VK_DOWN:
-                        shifty+=1;
-                        setStampsToView();
-                        break;
+
                 }
             }
         
         });
     }
     
+    
     int shiftx;
     int shifty;
-    
-    void setStampsToView() {
-        double[][] stamp1 = null;
-        int[] mid1 = new int[1];
-        int[] mid2 = new int[1];
-        SiftStamp sift1 = null;
-        SiftStamp sift2 = null;        
-        
-        if (target1 != null) {
-            stamp1 = ApproachingPerfection.buildStamp(thing1.gs, target1.x, target1.y, ApproachingPerfection.stampSize, thing1.stampWeights, mid1);
-            sift1 = ApproachingPerfection.buildSiftStamp(thing1.gs, target1.x, target1.y);
-        }
-        double[][] stamp2 = null;
-        if (target2 != null) {
-            stamp2 = ApproachingPerfection.buildStamp(thing2.gs, target2.x + shiftx, target2.y + shifty, ApproachingPerfection.stampSize, thing2.stampWeights, mid2);
-            sift2 = ApproachingPerfection.buildSiftStamp(thing2.gs, target2.x + shiftx, target2.y + shifty);
-        }
-        stampView.setSifts(sift1, sift2);
-        stampView.setStamps(stamp1, mid1[0], stamp2, mid2[0], thing1.stampWeights);     
-        repaint();
-    }
     
    
     void paintLinks(Graphics g)
@@ -324,6 +310,9 @@ public class LinkPane extends JPanel
     
     void paintMaxims(Graphics g, ArrayList<int[]> maxims, int x0, int y0)
     {
+        if (maxims == null) {
+            return;
+        }
 //        System.out.println("maxims:" + maxims.size());
         g.setColor(Color.yellow);
         for (int [] m:maxims)
@@ -332,53 +321,18 @@ public class LinkPane extends JPanel
         }
     }
     
-    void paintFaces(Graphics g)
-    {
-        int offx = view1.getX();
-        int offy = view1.getY();
-        
-        if (faceList == null || !showFaces || links == null) return;
-
-        g.setColor(Color.WHITE);
-        
-        for (Face face : faceList)
-        {
-            FtrLink l1 = links.get(face.r1);
-            FtrLink l2 = links.get(face.r2);
-            FtrLink l3 = links.get(face.r3);
-        
-            g.drawLine(l1.f1.x + offx, l1.f1.y + offy, l2.f1.x + offx, l2.f1.y + offy);
-            g.drawLine(l2.f1.x + offx, l2.f1.y + offy, l3.f1.x + offx, l3.f1.y + offy);
-            g.drawLine(l1.f1.x + offx, l1.f1.y + offy, l3.f1.x + offx, l3.f1.y + offy);
-            
-        }
-    }
-
     
     @Override
     public void paint(Graphics g)
     {
         super.paint(g);
-        
-        paintFaces(g);        
+               
         g.setColor(new Color(255,255,255,50));
-        paintLinks(g);
         markCurrentLink(g);
         
-        if (showMaxims) {
-            paintMaxims(g, thing1.getMaxims(), view1.getX(), view1.getY());
-            paintMaxims(g, thing2.getMaxims(), view2.getX(), view2.getY());
-        }
-        
-        g.setColor(new Color(0,0,0,50));
-        g.fillRect(view3.getX(), view3.getY(), view3.getWidth(), view3.getHeight());
-        g.fillRect(view4.getX(), view4.getY(), view4.getWidth(), view4.getHeight());
-
+        paintMaxims(g, thing1.getMaxims(), view1.getX(), view1.getY());
+        paintMaxims(g, thing2.getMaxims(), view4.getX(), view4.getY());
         g.setColor(Color.yellow);
-        if (showMaxims) {
-            paintMaxims(g, thing1.getMaxims(), view3.getX(), view3.getY());
-            paintMaxims(g, thing2.getMaxims(), view4.getX(), view4.getY());
-        }
         if (target1 != null) {
             g.setColor(Color.BLUE);
             g.drawRect(view1.getX() + target1.x - 5, view1.getY() - 5 + target1.y, 10, 10);
@@ -394,3 +348,6 @@ public class LinkPane extends JPanel
         }
     }        
 }
+
+    
+    

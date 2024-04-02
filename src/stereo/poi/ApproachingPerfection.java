@@ -33,7 +33,7 @@ public class ApproachingPerfection
     
     public Greyscale gs;
     Greyscale gsGrad;
-    public static int stampSize = 30;
+    public static int stampSize = 16;
     ArrayList[][] proxiGrid;
     double proximity = 0.3;
     int gridTileSize;
@@ -556,4 +556,75 @@ public class ApproachingPerfection
             System.out.println("face " + i + " / " + faces.size());
         }        
     }
+    
+    public static SiftStamp buildSiftStamp(Greyscale gs, int xs, int ys) {
+        if (xs < 5 || xs > gs.width - 5 || ys < 5 || ys > gs.height - 5) {
+            return null;
+        }
+        int[] mainHistogram = new int[32];
+        int[][] quadHisto = new int[4][];
+        int[] resultHisto = new int[4*16];
+        for (int i=0; i<quadHisto.length; i++) {
+            quadHisto[i] = new int[16];
+        }
+        
+        for (int j=0; j<8; j++) {
+            int adr = (ys - 4 + j)*gs.width;
+            for (int i=0; i<8; i++) {
+                int pxAdr = adr + xs - 4 + i;                
+                int n = gs.px[pxAdr - gs.width];
+                int s = gs.px[pxAdr + gs.width];
+                int w = gs.px[pxAdr - 1];
+                int e = gs.px[pxAdr + 1];
+                
+                int dx = e - w;
+                int dy = s - n;
+                
+                double a = Math.atan2(dy, dx);                
+                double na = (a + Math.PI) / (2*Math.PI);
+                int mainI = (int)(na*(mainHistogram.length-1));
+                mainHistogram[mainI] += 1;
+                int hy = 2*j/8;
+                int hx = 2*i/8;
+                int hi = hy*2 + hx;
+                int[] qh = quadHisto[hi];                
+                int qhi = (int)(na*(qh.length-1));
+                qh[qhi] += 1;                           
+            }            
+        }
+        int max = 0;
+        int mi = 0;
+        for (int i=0; i<mainHistogram.length; i++) {
+            if (max < mainHistogram[i]) {
+                max = mainHistogram[i];
+                mi = i;
+            }
+        }
+        
+        /* principal angle in index dimension of smaller histogram of a quadrant.
+           detected principal rotation will be eliminated by shifting values of quadrant histograms 
+           by "id" bin positions
+        */
+        int id = (int)((double)mi / (mainHistogram.length-1) * (quadHisto[0].length-1));
+//        double mainA = (double)mi / (mainHistogram.length-1) *2*Math.PI - Math.PI;
+        
+        for (int j=0; j<quadHisto.length; j++) {
+            for (int i=0; i<quadHisto[j].length; i++) {
+                int ri = i - id;
+                if (ri < 0) {
+                    ri = quadHisto[j].length + ri;
+                }
+                
+                int rhi = j * 16 + ri;
+                if (rhi >= resultHisto.length) {
+                    System.out.println("kokot");
+                }
+                resultHisto[rhi] = quadHisto[j][i];                
+            }            
+        }
+        double a = (double)mi/(mainHistogram.length-1)*2*Math.PI - Math.PI;
+        return new SiftStamp(resultHisto, a);        
+    }
 }
+
+

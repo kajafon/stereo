@@ -601,6 +601,49 @@ public class Greyscale
         }
         return list;
     }
+
+    
+    public static ArrayList<int[]> localMaxims(ArrayList<int[]> list, Greyscale gs1, Greyscale gs2, int thrsh)
+    {
+        if (list == null)
+            list = new ArrayList<int[]>();
+
+        int adr = gs1.width+1;
+        for (int j = 1; j < gs1.height-1; j++)
+        {
+            for (int i = 1; i < gs1.width-1; i++,adr++)
+            {
+                if (gs1.px[adr] < thrsh) continue; 
+                if (
+                    gs1.px[adr] >= gs1.px[adr-1      ] &&
+                    gs1.px[adr] >= gs1.px[adr-1-gs1.width] &&
+                    gs1.px[adr] >= gs1.px[adr  -gs1.width] &&
+                    gs1.px[adr] >= gs1.px[adr+1-gs1.width] &&
+                    gs1.px[adr] >= gs1.px[adr+1      ] &&
+                    gs1.px[adr] >= gs1.px[adr+1+gs1.width] &&
+                    gs1.px[adr] >= gs1.px[adr  +gs1.width] &&
+                    gs1.px[adr] >= gs1.px[adr-1+gs1.width] &&
+                        
+                    gs1.px[adr] >= gs2.px[adr        ] &&
+                        
+                    gs1.px[adr] >= gs2.px[adr-1      ] &&
+                    gs1.px[adr] >= gs2.px[adr-1-gs2.width] &&
+                    gs1.px[adr] >= gs2.px[adr  -gs2.width] &&
+                    gs1.px[adr] >= gs2.px[adr+1-gs2.width] &&
+                    gs1.px[adr] >= gs2.px[adr+1      ] &&
+                    gs1.px[adr] >= gs2.px[adr+1+gs2.width] &&
+                    gs1.px[adr] >= gs2.px[adr  +gs2.width] &&
+                    gs1.px[adr] >= gs2.px[adr-1+gs2.width]
+                        
+                )
+                {
+                    list.add(new int[]{i,j,gs1.px[adr]});                               
+                } 
+            }
+            adr+=2;
+        }
+        return list;
+    }
     
     public ArrayList<int[]> localMaxims_FAST(int cirRadius, double rn, int thrsh)
     {
@@ -754,4 +797,68 @@ public class Greyscale
         }
 
     }
+    
+    public double getHessianTest(int x, int y) {
+        if (x<=0 || y<=0 || x>=width || y>=height) {
+            return Double.POSITIVE_INFINITY;
+        }
+        int adr = x + y * width;
+        double dxx = px[adr+1]       - px[adr-1];
+        double dyy = px[adr+width]   - px[adr-width];
+        double dxy = px[adr+width+1] - px[adr-width-1];
+        
+        double trace = dxx + dyy;
+        double det = dxx * dyy - (dxy*dxy);
+        if (det == 0) {
+            return 0;
+        }
+        
+        double A = trace*trace/det;
+        
+        return A;     
+    }
+    
+    public static double[] calcSubPeak(int x, int y, int z, Greyscale g1, Greyscale g2, Greyscale g3) {        
+        double dx = g2.get(x+1, y) - g2.get(x-1, y);
+        double dy = g2.get(x, y+1) - g2.get(x, y-1);
+        double ds = g3.get(x, y)   - g1.get(x, y);
+        
+        double dxx = g2.get(x+1, y) + g2.get(x-1, y) - 2*g2.get(x, y);
+        double dyy = g2.get(x, y+1) + g2.get(x, y-1) - 2*g2.get(x, y);
+        double dss = g3.get(x, y)   + g1.get(x, y) - 2*g2.get(x, y);
+        
+        double tx = -dx/dxx;
+        if (dxx != 0) {
+            tx /= dxx;
+        }        
+        double ty = -dy/dyy;
+        if (dyy != 0) {
+            ty /= dyy;
+        }        
+        double ts = -ds/dss;
+        if (dss != 0) {
+            ts /= dss;
+        }
+        
+        return new double[] {tx, ty, ts};        
+    }    
+    
+    public double[] calcSubPeak(int x, int y) {        
+        double dx = get(x+1, y) - get(x-1, y);
+        double dy = get(x, y+1) - get(x, y-1);
+        
+        double dxx = get(x+1, y) + get(x-1, y) - 2*get(x, y);
+        double dyy = get(x, y+1) + get(x, y-1) - 2*get(x, y);
+        
+        double tx = -dx;
+        if (dxx != 0) {
+            tx /= dxx;
+        }
+        double ty = -dy;
+        if (dyy != 0) {
+            ty /= dyy;
+        }
+        
+        return new double[] {tx, ty};        
+    }    
 }
