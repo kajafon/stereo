@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import javax.swing.JPanel;
 import stereo.poi.CircleRaster;
+import stereo_praha.Algebra;
 
 /**
  *
@@ -123,9 +124,25 @@ public class Greyscale
         Triangle.triangleShort(x1,y1, x3, y3, x4, y4,
                                0, 0, gs.width-1, gs.height-1, 0, gs.height-1, gs.px, gs.width, gs2.px, gs.width, gs.height);  
         
-        return gs2;
-        
+        return gs2;        
     }
+    
+    public void drawRotatedStamp(int x, int y, int srcx, int srcy, int size, double a, Greyscale src) {
+        double sin = Math.sin(a);
+        double cos = Math.cos(a);               
+        
+        int u1 = (int)(srcx + Numeric._rotateX( -size/2, -size/2, cos, sin));
+        int v1 = (int)(srcy + Numeric._rotateY( -size/2, -size/2, cos, sin));
+        int u2 = (int)(srcx + Numeric._rotateX(  size/2, -size/2, cos, sin));
+        int v2 = (int)(srcy + Numeric._rotateY(  size/2, -size/2, cos, sin));
+        int u3 = (int)(srcx + Numeric._rotateX(  size/2,  size/2, cos, sin));
+        int v3 = (int)(srcy + Numeric._rotateY(  size/2,  size/2, cos, sin));
+        int u4 = (int)(srcx + Numeric._rotateX( -size/2,  size/2, cos, sin));
+        int v4 = (int)(srcy + Numeric._rotateY( -size/2,  size/2, cos, sin));
+        
+        Triangle.triangleShort(x-size/2, y-size/2, x+size/2, y-size/2, x+size/2, y+size/2, u1, v1, u2, v2, u3, v3, src.px, src.width, px, width, height);
+        Triangle.triangleShort(x-size/2, y-size/2, x+size/2, y+size/2, x-size/2, y+size/2, u1, v1, u3, v3, u4, v4, src.px, src.width, px, width, height);
+    }    
         
     public Histogram calcHistogram()
     {
@@ -798,26 +815,6 @@ public class Greyscale
 
     }
     
-    public double getHessianTest(int x, int y) {
-        if (x<=0 || y<=0 || x>=width || y>=height) {
-            return Double.POSITIVE_INFINITY;
-        }
-        int adr = x + y * width;
-        double dxx = px[adr+1]       - px[adr-1];
-        double dyy = px[adr+width]   - px[adr-width];
-        double dxy = px[adr+width+1] - px[adr-width-1];
-        
-        double trace = dxx + dyy;
-        double det = dxx * dyy - (dxy*dxy);
-        if (det == 0) {
-            return 0;
-        }
-        
-        double A = trace*trace/det;
-        
-        return A;     
-    }
-    
     public static double[] calcSubPeak(int x, int y, int z, Greyscale g1, Greyscale g2, Greyscale g3) {        
         double dx = g2.get(x+1, y) - g2.get(x-1, y);
         double dy = g2.get(x, y+1) - g2.get(x, y-1);
@@ -843,22 +840,44 @@ public class Greyscale
         return new double[] {tx, ty, ts};        
     }    
     
-    public double[] calcSubPeak(int x, int y) {        
-        double dx = get(x+1, y) - get(x-1, y);
-        double dy = get(x, y+1) - get(x, y-1);
+    public void copyRotatedStamp(int xTrgt, int yTrgt, int xSrc, int ySrc, int size, double angle, Greyscale src) {
         
-        double dxx = get(x+1, y) + get(x-1, y) - 2*get(x, y);
-        double dyy = get(x, y+1) + get(x, y-1) - 2*get(x, y);
+        double sin = Math.sin(angle);
+        double cos = Math.cos(angle);
+        int sizeHalf = size/2;
         
-        double tx = -dx;
-        if (dxx != 0) {
-            tx /= dxx;
-        }
-        double ty = -dy;
-        if (dyy != 0) {
-            ty /= dyy;
-        }
+        double _x2Left = xSrc + Numeric._rotateX(-sizeHalf, -sizeHalf, cos, sin);
+        double _y2Left = ySrc + Numeric._rotateY(-sizeHalf, -sizeHalf, cos, sin);
         
-        return new double[] {tx, ty};        
-    }    
+        for (int j = 0; j<size; j++) {
+            int y1 = j - sizeHalf + yTrgt;
+            if ( y1 < 0) {
+                continue;
+            } 
+            if (y1 >= height) {
+                break;
+            }
+            int adr1 = y1*width; 
+            double _x2 = _x2Left;
+            double _y2 = _y2Left;                
+            for (int i = 0; i<size; i++) {
+                int x1 = xTrgt - sizeHalf + i;
+                if (x1 >= width) {
+                    break;
+                }
+                if (x1 >= 0) {
+                    if (_x2 >= 0 && _x2<src.width && _y2 >= 0 && _y2 < src.height) {                
+                        int adr2 = ((int)_y2)*src.width + (int)_x2; 
+                        px[x1 + adr1] = src.px[adr2];
+                    }
+                }                
+                _x2 += cos;
+                _y2 += sin;
+            }            
+            
+            _x2Left += -sin;
+            _y2Left += cos;
+        }        
+    }     
 }
+
