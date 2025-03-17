@@ -8,59 +8,25 @@ import stereo_praha.gui.stuff3D;
 public class Algebra {
 
     
-    public static double compare(double[][] v1, int mid1, double[][] v2, int mid2, double[][] weights, int v2Shifft_x, int v2Shifft_y)
-    {
-        
-        int x1_start, y1_start, x2_start, y2_start, w, h;
-        
-        
-        if (v2Shifft_x >= 0) {
-            x1_start = v2Shifft_x;
-            x2_start = 0;
-        } else {
-            x1_start = 0;
-            x2_start = -v2Shifft_x;
-        }
-
-        if (v2Shifft_y >= 0) {
-            y1_start = v2Shifft_y;
-            y2_start = 0;
-        } else {
-            y1_start = 0;
-            y2_start = -v2Shifft_y;
-        }
-        
-        w = v1[0].length - Math.abs(v2Shifft_x);
-        h = v1.length - Math.abs(v2Shifft_y);        
+    public static double compare(double[][] v1, double[][] v2)
+    {        
+        int w = v1[0].length;
+        int h = v1.length;        
         
         double sum = 0;
-        double stSum1 = 0;
-        double stSum2 = 0;
+        double sum2 = 0;
         for (int j=0; j<h; j++)
         {
             for (int i=0; i<w; i++)
             {
-                double wv1 = v1[j+y1_start][i+x1_start] * weights[j+y1_start][i+x1_start];
-                double wv2 = v2[j+y2_start][i+x2_start] * weights[j+y2_start][i+x2_start];
-                double max = Math.max(wv1, wv2);
-                if (max > 0) {
-                    double d = Math.abs(wv1-wv2) / max;
-                    sum += d*d;
-                }
-//                stSum1 += wv1 * wv1;
-//                stSum2 += wv2 * wv2;                
-//                sum    += wv1 * wv2;
-
-    
+                double wv1 = v1[j][i];
+                double wv2 = v2[j][i];
+                double d = (wv1-wv2);
+                sum += d*d;
+                sum2 += Math.abs(wv1*wv2);
             }
-        }
-        
-//        sum /= stSum1 * stSum2;     
-        
-//        double error = Math.abs(mid1 - mid2) / (double)(mid1 + mid2) * 2;
-//        error = sum * Math.pow(Math.E, error);
-        
-        return sum;
+        }        
+        return Math.sqrt(sum/sum2);
     }
     /*
         intersection of a polygon and a line
@@ -1084,4 +1050,44 @@ public class Algebra {
             }        
         }        
     }
+    
+    public static double hessianTest(int x, int y, int[] px, int width, int height) {
+        if (x<=0 || y<=0 || x>=width || y>=height) {
+            return Double.POSITIVE_INFINITY;
+        }
+        int adr = x + y * width;
+        double dxx = px[adr+1]       - px[adr-1];
+        double dyy = px[adr+width]   - px[adr-width];
+        double dxy = px[adr+width+1] - px[adr-width-1];
+        
+        double trace = dxx + dyy;
+        double det = dxx * dyy - (dxy*dxy);
+        if (det == 0) {
+            return 0;
+        }
+        
+        double A = trace*trace/det;        
+        return A;     
+    }
+    
+    public static double[] calcSubPeak(int x, int y, int[] px, int width) {        
+        
+        int adr = y * width + x;
+        double dx = px[adr+1] - px[adr-1];
+        double dy = px[adr+width] - px[adr-width];
+        
+        double dxx = px[adr+1] + px[adr-1] - 2*px[adr];
+        double dyy = px[adr+width] + px[adr-width] - 2*px[adr];
+        
+        double tx = -dx;
+        if (dxx != 0) {
+            tx /= dxx;
+        }
+        double ty = -dy;
+        if (dyy != 0) {
+            ty /= dyy;
+        }
+        
+        return new double[] {tx, ty};        
+    }   
 }

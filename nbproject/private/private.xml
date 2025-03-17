@@ -3,13 +3,17 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
+            <file>file:/D:/_robota/stereo/src/stereo/Numeric.java</file>
             <file>file:/D:/_robota/stereo/src/stereo/ui/LinkPane.java</file>
             <file>file:/D:/_robota/stereo/src/stereo/Greyscale.java</file>
-            <file>file:/D:/_robota/stereo/src/stereo/Matcher.java</file>
+            <file>file:/D:/_robota/stereo/src/stereo/ui/LinkPane_sift.java</file>
             <file>file:/D:/_robota/stereo/src/stereo/poi/ApproachingPerfection.java</file>
-            <file>file:/D:/_robota/stereo/src/stereo/ui/RelationPane.java</file>
+            <file>file:/D:/_robota/stereo/src/stereo/to3d/FtrLink.java</file>
+            <file>file:/D:/_robota/stereo/src/stereo_praha/Algebra.java</file>
+            <file>file:/D:/_robota/stereo/src/stereo/ui/Manual.java</file>
+            <file>file:/D:/_robota/stereo/src/stereo/to3d/MatchedFtr.java</file>
+            <file>file:/D:/_robota/stereo/src/stereo/ui/StampView.java</file>
             <file>file:/D:/_robota/stereo/src/stereo/Main.java</file>
-            <file>file:/D:/_robota/stereo/src/stereo/poi/CircleRaster.java</file>
         </group>
     </open-files>
 </project-private>

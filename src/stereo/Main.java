@@ -8,6 +8,9 @@ import stereo.to3d.FtrLink;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import static java.awt.Image.SCALE_SMOOTH;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -44,9 +47,9 @@ public class Main
         
     public static void main(String[] args)
     {        
-        sift();
+//        sift();
 //        gauss();
-//        links();
+        links();
 //        manual();
         
         // -----------------------------------------
@@ -79,22 +82,32 @@ public class Main
         GuiUtils.frameIt(new JLabel(new ImageIcon(img)), 700, 300, null);
     }
     
+    static BufferedImage loadImage(String filePath, int width) throws IOException  {
+        Image img = ImageIO.read(new File(filePath));
+        int height = (int)((double)width/img.getWidth(null)*img.getHeight(null));
+        img = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D bGr = bi.createGraphics();
+        bGr.drawImage(img, 0, 0, null);
+        bGr.dispose();
+        return bi;
+    }
+    
     public static void links()
     {
         System.out.println("={links}=");
         
-        final BufferedImage img1;
-        final BufferedImage img2;
+        BufferedImage img1;
+        BufferedImage img2;
         try
         {
-           img1 = ImageIO.read(new File("./tehly1.jpg"));
-           img2 = ImageIO.read(new File("./tehly2.jpg"));
+           img1 = loadImage("./imgs/cavango1.jpg", 400);
+           img2 = loadImage("./imgs/cavango2.jpg", 400);
         } catch(IOException e)
         {
             e.printStackTrace();
             return;
-        }        
-        
+        }              
        
         ApproachingPerfection perfect1 = new ApproachingPerfection(img1);
         ApproachingPerfection perfect2 = new ApproachingPerfection(img2);
@@ -150,8 +163,8 @@ public class Main
         frame.getContentPane().add(linkPane, BorderLayout.CENTER);
 //        frame.getContentPane().add(histoPanel, BorderLayout.SOUTH);
         frame.pack();
-        frame.setSize(1100, 600);
-        frame.setLocation(100, 100);
+        frame.setSize(1600, 600);
+        frame.setLocation(10, 10);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);        
     }
@@ -165,8 +178,8 @@ public class Main
         final BufferedImage img2;
         try
         {
-           img1 = ImageIO.read(new File("./umna1.jpg"));
-           img2 = ImageIO.read(new File("./umna2.jpg"));
+           img1 = ImageIO.read(new File("./tehly1.jpg"));
+           img2 = ImageIO.read(new File("./tehly2.jpg"));
         } catch(IOException e)
         {
             e.printStackTrace();

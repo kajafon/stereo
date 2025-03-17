@@ -10,10 +10,21 @@ package stereo.poi;
  * @author sdsdf
  */
 public class SiftStamp {
-    public SiftStamp(int[] v, double a) {
-        this.vector = v;
+    public SiftStamp(int x, int y, double a, double size) {
+        this.x = x;
+        this.y = y;
+        this.angle = a;
+        this.size = size;            
+    }
+
+    public SiftStamp(int x, int y, double a) {
+        this.x = x;
+        this.y = y;
         this.angle = a;
     }
-    public int[] vector;
+    public int x;
+    public int y;
     public double angle;
+    public double size;
+    public int[] vector;
 }

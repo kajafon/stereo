@@ -18,7 +18,7 @@ public class Feature
     public double[][] stamp;
     public int midValue;
     
-    public double score = 0;
+    public int numRefs = 0;
 
     public Feature(int x, int y)
     {
@@ -30,13 +30,7 @@ public class Feature
     {
         double res = Double.MAX_VALUE;
         
-        res = Math.min(res, Algebra.compare(f1.stamp, f1.midValue, f2.stamp, f2.midValue, weights, 0, 0));
-//        res = Math.min(res, Algebra.compare(f1.stamp, f1.midValue, f2.stamp, f2.midValue, weights, 1, 0));
-//        res = Math.min(res, Algebra.compare(f1.stamp, f1.midValue, f2.stamp, f2.midValue, weights, 1, 1));
-//        res = Math.min(res, Algebra.compare(f1.stamp, f1.midValue, f2.stamp, f2.midValue, weights, 0, 1));
-//        res = Math.min(res, Algebra.compare(f1.stamp, f1.midValue, f2.stamp, f2.midValue, weights, -1, 0));
-//        res = Math.min(res, Algebra.compare(f1.stamp, f1.midValue, f2.stamp, f2.midValue, weights, -1, -1));
-//        res = Math.min(res, Algebra.compare(f1.stamp, f1.midValue, f2.stamp, f2.midValue, weights, 0, -1));
+        res = Math.min(res, Algebra.compare(f1.stamp, f2.stamp));
         
         return res;        
     }

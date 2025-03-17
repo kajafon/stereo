@@ -40,7 +40,6 @@ class StampView extends JPanel {
         stampView.setPreferredSize(new Dimension(120, 60));
         siftDesc.setPreferredSize(new Dimension(100, 50));
         
-        setBorder(new LineBorder(Color.RED, 10));
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 1;
@@ -60,8 +59,10 @@ class StampView extends JPanel {
         
         for (int j=0; j<stamp.length; j++) {
             for (int i=0; i<stamp.length; i++) {
-                short val = (short)(Math.min(255, stamp[j][i]*15));
-                gs.px[j*gs.width + i] = val;
+                double v = stamp[j][i] + 120;
+                v = Math.min(255, v);
+                v = Math.max(0, v);
+                gs.px[j*gs.width + i] = (short)v;
             }            
         }
         
@@ -80,25 +81,22 @@ class StampView extends JPanel {
         this.sift1 = sift1;
         siftDesc.clearGraphs();
         if (sift1 != null) {
-            siftDesc.addGraph(sift1.vector, "sift1");
+            siftDesc.addGraph(new int[]{sift1.x, sift1.y}, "sift1");
         }
         this.sift2 = sift2;        
         if (sift2 != null) {
-            siftDesc.addGraph(sift2.vector, "sift2");
+            siftDesc.addGraph(new int[]{sift2.x, sift2.y}, "sift2");
         }
         stampView.repaint();
         repaint();
     }
     
-    public void setStamps(double[][] s1, int midVal_1, double[][]s2, int midVal_2, double[][] weights) {
+    public void setStamps(double[][] s1, double[][]s2, double[][] weights) {
         stamp1 = s1;
         stamp2 = s2;
-        
-        midVal1 = midVal_1;
-        midVal2 = midVal_2;        
-        
+                
         if (stamp1 != null && stamp2 != null) {
-            error = Algebra.compare(stamp1, midVal_1, stamp2, midVal_2, weights, 0, 0);            
+            error = Algebra.compare(stamp1, stamp2);            
 //            error2 = Math.abs(midVal_1 - midVal_2) / (double)(midVal_1 + midVal_2) * 2;
 //            errorResult = error * Math.pow(Math.E, error2);
 //            
@@ -106,7 +104,7 @@ class StampView extends JPanel {
 //            error2 = Math.floor(error2 * 10000)/10000;
 //            errorResult = Math.floor(errorResult * 10000)/10000;
             
-            System.out.println("e:" + error);            
+//            System.out.println("e:" + error);            
         }
         
         stamp1Img = null;
@@ -119,13 +117,14 @@ class StampView extends JPanel {
             stamp2Img = createImage(stamp2);
         }
         
-        stampView.repaint();
         repaint();
+        stampView.repaint();
     }
     
     JPanel stampView = new JPanel(){ 
         @Override
         protected void paintComponent(Graphics g) {
+            System.out.println("---- stamp view repaint");
             super.paintComponent(g); 
             int yoffset = 50;
             int padding = 10;
@@ -157,5 +156,14 @@ class StampView extends JPanel {
 
         }
     };
+    
+    public void setFlag(boolean val) {
+        if (val) {
+            setBorder(new LineBorder(Color.red, 3));
+        } else {
+            setBorder(null);
+        }
+        repaint();
+    }
 }
 

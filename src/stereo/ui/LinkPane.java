@@ -12,6 +12,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -19,7 +20,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -36,6 +39,7 @@ import stereo.to3d.FtrLink;
 import stereo.poi.Feature;
 import stereo.poi.Relation;
 import stereo.to3d.Face;
+import stereo.to3d.MatchedFtr;
 import stereo_praha.Algebra;
 
 /**
@@ -74,14 +78,19 @@ public class LinkPane extends JPanel
     {
         this.faceList = faceList;
     }
-            
+        
+    boolean isInView(int x, int y, JComponent view) {
+        return x >= view.getX() && x < view.getX() + view.getWidth() && 
+        y >= view.getY() && y < view.getY() + view.getHeight();
+    }    
+    
     public LinkPane(ApproachingPerfection thing1, ApproachingPerfection thing2, ArrayList<FtrLink> links)
     {
         setFocusable(true);
         view1 = new JLabel(new ImageIcon(thing1.getImg()));
         view2 = new JLabel(new ImageIcon(thing2.getImg()));
-        view3 = new JLabel(new ImageIcon(thing1.getGrad()));
-        view4 = new JLabel(new ImageIcon(thing2.getGrad()));
+        view3 = new JLabel(new ImageIcon(thing1.gsExp.createImage(null)));
+        view4 = new JLabel(new ImageIcon(thing2.gsExp.createImage(null)));
         
         Dimension d = new Dimension(300,300);
         
@@ -96,9 +105,16 @@ public class LinkPane extends JPanel
       
         add(view1);
         add(view2);
-//        add(view3);
-//        add(view4);
+        add(view3);
+        add(view4);
         add(stampView);
+        JButton btn = new JButton(new AbstractAction("settle...") {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                LinkPane.this.runAnimatedSettling();
+            }            
+        });
+        add(btn);
         
         addMouseMotionListener(new MouseAdapter() 
         {
@@ -107,17 +123,40 @@ public class LinkPane extends JPanel
             {
                 if (LinkPane.this.links != null) {
                     spot = me.getPoint();
+                    JComponent view = null;
+                    int ftrIndx = -1;
 
-                    int x = spot.x - view1.getX();
-                    int y = spot.y - view1.getY();
+                    if (isInView(spot.x, spot.y, view1)) {
+                        view = view1;
+                        ftrIndx = 0;
+                    } else if (isInView(spot.x, spot.y, view2)) {
+                        view = view2;
+                        ftrIndx = 1;
+                    } else {
+                        return;
+                    }                          
+                        
+                    int x = spot.x - view.getX();
+                    int y = spot.y - view.getY();
+                    double dist = 10;
                     for (FtrLink l:LinkPane.this.links)
                     {
-                        if (Math.abs(l.f1.x - x) + Math.abs(l.f1.y - y) < 10)
+                        Feature f = l.getFeature(ftrIndx);
+                        double d = Math.abs(f.x - x) + Math.abs(f.y - y);
+                        if (d < dist)
                         {
+                            dist = d;
                             currentLink = l;
-                            break;
                         }
                     }
+                    
+                    if (currentLink != null) {
+                        int cCount = 0;
+                        if (currentLink.candidates != null) {
+                            cCount = currentLink.candidates.size();
+                        }
+//                        System.out.println("curr link: " + x + ", " + y + " cndts cnt: " + cCount + ", f2 refs: " + currentLink.f2.numRefs);
+                    }                    
                 }
                 repaint();               
             }
@@ -150,7 +189,7 @@ public class LinkPane extends JPanel
                     } else {
                         target2 = new Point(x,y);       
                     }
-
+                    target2Angle = 0;
                     setStampsToView();                    
                     return;
                 }
@@ -164,6 +203,7 @@ public class LinkPane extends JPanel
                     target1 = new Point(x,y);       
                     shiftx = 0;
                     shifty = 0;
+                    target2Angle = 0;
 
                     setStampsToView();
                 } 
@@ -197,24 +237,12 @@ public class LinkPane extends JPanel
                         repaint();
                         break;                      
                     case KeyEvent.VK_T: 
-                        if (currentLink != null) {
-                             
-                            target1 = new Point(currentLink.f1.x, currentLink.f1.y);
-                            
-                            if (targettedLink != currentLink) {
-                                targettedLink = currentLink;
-                                trgt2Index = 0;                                
-                            } else {
-                                trgt2Index = (trgt2Index + 1)%currentLink.candidates.size();                                
-                            }
-                            
-                            Feature f = currentLink.candidates.get(trgt2Index);
-                            target2 = new Point(f.x, f.y);
-                            shiftx = 0;
-                            shifty = 0;
-                            
-                            setStampsToView();
-                        }
+                        target1 = new Point(currentLink.f1.x, currentLink.f1.y);                            
+                        target2 = new Point(currentLink.mf2.f.x, currentLink.mf2.f.y);                            
+                        shiftx = 0;
+                        shifty = 0;
+                        target2Angle = 0;
+                        setStampsToView();
                         break;  
                     case KeyEvent.VK_LEFT:
                         shiftx-=1;
@@ -232,6 +260,14 @@ public class LinkPane extends JPanel
                         shifty+=1;
                         setStampsToView();
                         break;
+                    case KeyEvent.VK_PAGE_UP: 
+                        target2Angle -= Math.PI/80;
+                        setStampsToView();                        
+                        break;
+                    case KeyEvent.VK_PAGE_DOWN: 
+                        target2Angle += Math.PI/80;
+                        setStampsToView();
+                        break;
                 }
             }
         
@@ -240,6 +276,8 @@ public class LinkPane extends JPanel
     
     int shiftx;
     int shifty;
+    Greyscale stampGs = new Greyscale(2*ApproachingPerfection.stampSize, 2*ApproachingPerfection.stampSize);
+    double target2Angle = 0;
     
     void setStampsToView() {
         double[][] stamp1 = null;
@@ -248,29 +286,61 @@ public class LinkPane extends JPanel
         SiftStamp sift1 = null;
         SiftStamp sift2 = null;        
         
+        System.out.println("set stamps");
         if (target1 != null) {
-            stamp1 = ApproachingPerfection.buildStamp(thing1.gs, target1.x, target1.y, ApproachingPerfection.stampSize, thing1.stampWeights, mid1);
-            sift1 = ApproachingPerfection.buildSiftStamp(thing1.gs, target1.x, target1.y);
+//            System.out.println("stamp 1:");
+//            stampGs.drawRotatedStamp(ApproachingPerfection.stampSize/2, ApproachingPerfection.stampSize/2, target1.x, target1.y, ApproachingPerfection.stampSize, 0, thing1.gs);
+//            stamp1 = ApproachingPerfection.buildStamp(stampGs, ApproachingPerfection.stampSize/2, ApproachingPerfection.stampSize/2, ApproachingPerfection.stampSize, thing1.stampWeights, mid1);
+
+            stamp1 = ApproachingPerfection.buildStamp(thing1.gs, target1.x, target1.y, ApproachingPerfection.stampSize, thing1.stampWeights, null);
+//            sift1 = ApproachingPerfection.buildSiftStamp(thing1.gs, target1.x, target1.y);
         }
         double[][] stamp2 = null;
         if (target2 != null) {
-            stamp2 = ApproachingPerfection.buildStamp(thing2.gs, target2.x + shiftx, target2.y + shifty, ApproachingPerfection.stampSize, thing2.stampWeights, mid2);
-            sift2 = ApproachingPerfection.buildSiftStamp(thing2.gs, target2.x + shiftx, target2.y + shifty);
+//            stampGs.drawRotatedStamp(ApproachingPerfection.stampSize, ApproachingPerfection.stampSize, target2.x + shiftx, target2.y + shifty, ApproachingPerfection.stampSize, target2Angle, thing2.gs);
+            stampGs.copyRotatedStamp(ApproachingPerfection.stampSize, ApproachingPerfection.stampSize, target2.x + shiftx, target2.y + shifty, ApproachingPerfection.stampSize, target2Angle, thing2.gs);
+            stamp2 = ApproachingPerfection.buildStamp(stampGs, ApproachingPerfection.stampSize, ApproachingPerfection.stampSize, ApproachingPerfection.stampSize, thing2.stampWeights, null);
         }
-        stampView.setSifts(sift1, sift2);
-        stampView.setStamps(stamp1, mid1[0], stamp2, mid2[0], thing1.stampWeights);     
+        stampView.setStamps(stamp1, stamp2, thing1.stampWeights);     
         repaint();
     }
     
+    Thread th = null;
+    void runAnimatedSettling() {
+        if (target1 == null || target2 == null) {
+            System.out.println("target missing");
+            return;
+        }       
+        
+        ApproachingPerfection.MinimumCallback callback = new ApproachingPerfection.MinimumCallback(){
+            @Override
+            public void run(double[][] stamp1, double[][] stamp2, int x2, int y2, double a) {
+                stampView.setStamps(stamp1, stamp2, thing1.stampWeights);
+                stampView.repaint();
+                System.out.println("--- step");
+                
+                try {
+                    th.sleep(1000);
+                } catch(InterruptedException e)
+                {}
+            }            
+        };
+        
+        th = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                stampView.setFlag(true);
+                ApproachingPerfection.findMinimum(thing1.gs, target1.x, target1.y, thing2.gs, target2.x, target2.y, thing1.stampWeights, callback);
+                System.out.println("thread done.");
+                stampView.setFlag(false);
+            }
+        });
+        
+        th.start();
+    }
    
     void paintLinks(Graphics g)
     {
-        if (spot == null)
-        {
-            System.out.println("spot == null");
-            return;
-        }
-        
         if (links == null || links.isEmpty())
         {
             return;
@@ -284,7 +354,7 @@ public class LinkPane extends JPanel
         {
             if (currentLink == r || showLinks) {
                 Feature c1 = r.f1;
-                Feature c2 = r.f2;
+                Feature c2 = r.mf2.f;
 
                 if (c2 == null) {
                     continue;
@@ -301,23 +371,35 @@ public class LinkPane extends JPanel
 
     void markCurrentLink(Graphics g)
     {
-        if (currentLink != null && currentLink.f2 != null)
+        if (currentLink != null)
         {
             int x1 = view1.getX() + currentLink.f1.x;
             int y1 = view1.getY() + currentLink.f1.y;
-            
-            for ( Feature f : currentLink.candidates) {
 
-                if (f == currentLink.f2) {
+            g.setColor(Color.yellow);
+            int x2 = view2.getX() + currentLink.mf2.f.x;
+            int y2 = view2.getY() + currentLink.mf2.f.y;
+            g.drawRect(x1-2, y1-2, 4, 4);
+            g.drawRect(x2-2, y2-2, 4, 4);
+            g.setColor(Color.BLACK);
+            g.drawRect(x1-3, y1-3, 6, 6);
+            g.drawRect(x2-3, y2-3, 6, 6);
+            
+            for ( MatchedFtr mf : currentLink.candidates) {
+
+                if (mf == currentLink.mf2) {
                     g.setColor(Color.yellow);
                 } else {
                     g.setColor(Color.red);
                 }
 
-                int x2 = view2.getX() + f.x;
-                int y2 = view2.getY() + f.y;
+                x2 = view2.getX() + mf.f.x;
+                y2 = view2.getY() + mf.f.y;
                 g.drawRect(x1-2, y1-2, 4, 4);
                 g.drawRect(x2-2, y2-2, 4, 4);            
+                g.setColor(Color.BLACK);
+                g.drawRect(x1-3, y1-3, 6, 6);
+                g.drawRect(x2-3, y2-3, 6, 6);
             }            
         }        
     }

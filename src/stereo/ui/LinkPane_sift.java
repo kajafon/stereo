@@ -37,6 +37,7 @@ import stereo.to3d.FtrLink;
 import stereo.poi.Feature;
 import stereo.poi.Relation;
 import stereo.to3d.Face;
+import stereo.to3d.MatchedFtr;
 import stereo_praha.Algebra;
 
 /**
@@ -74,6 +75,8 @@ public class LinkPane_sift extends JPanel
     StampView stampView = new StampView(stampViewSize);
     int currenStep = 0;
     int imgWidth = 300;
+    ArrayList<SiftStamp> ipoints1;
+    ArrayList<SiftStamp> ipoints2;
 
     public void setFaceList(ArrayList<Face> faceList)
     {
@@ -93,14 +96,21 @@ public class LinkPane_sift extends JPanel
         if (gss != null) {
             view1.setIcon(createGuiImage(gss[0]));
             view2.setIcon(createGuiImage(gss[1]));
-            view3.setIcon(createGuiImage(gss[2]));
+            Greyscale _gs = gss[2].getCopy(null);
+            _gs.contrast(0, 50);
+            view3.setIcon(createGuiImage(_gs));
         }
         gss = this.thing2.getStep(i);
         if (gss != null) {
             view4.setIcon(createGuiImage(gss[0]));
             view5.setIcon(createGuiImage(gss[1]));
-            view6.setIcon(createGuiImage(gss[2]));
+            Greyscale _gs = gss[2].getCopy(null);
+            _gs.contrast(0, 50);
+            view6.setIcon(createGuiImage(_gs));
         }
+        
+        ipoints1 = thing1.getMaxims(i);
+        ipoints2 = thing2.getMaxims(i);
         
         revalidate();
         repaint();
@@ -292,32 +302,33 @@ public class LinkPane_sift extends JPanel
             int x1 = view1.getX() + currentLink.f1.x;
             int y1 = view1.getY() + currentLink.f1.y;
             
-            for ( Feature f : currentLink.candidates) {
+            for ( MatchedFtr mf : currentLink.candidates) {
 
-                if (f == currentLink.f2) {
+                if (mf == currentLink.mf2) {
                     g.setColor(Color.yellow);
                 } else {
                     g.setColor(Color.red);
                 }
 
-                int x2 = view2.getX() + f.x;
-                int y2 = view2.getY() + f.y;
+                int x2 = view2.getX() + mf.f.x;
+                int y2 = view2.getY() + mf.f.y;
                 g.drawRect(x1-2, y1-2, 4, 4);
                 g.drawRect(x2-2, y2-2, 4, 4);            
             }            
         }        
     }
     
-    void paintMaxims(Graphics g, ArrayList<int[]> maxims, int x0, int y0)
+    void paintMaxims(Graphics g, ArrayList<SiftStamp> maxims, int x0, int y0)
     {
         if (maxims == null) {
             return;
         }
 //        System.out.println("maxims:" + maxims.size());
         g.setColor(Color.yellow);
-        for (int [] m:maxims)
+        for (SiftStamp m:maxims)
         {
-            g.drawLine(x0 + m[0], y0 + m[1], x0 + m[0], y0 + m[1]);
+            int s = (int)(m.size * 3);
+            g.drawOval(x0 + m.x, y0 + m.y, s, s);
         }
     }
     
@@ -329,9 +340,10 @@ public class LinkPane_sift extends JPanel
                
         g.setColor(new Color(255,255,255,50));
         markCurrentLink(g);
-        
-        paintMaxims(g, thing1.getMaxims(), view1.getX(), view1.getY());
-        paintMaxims(g, thing2.getMaxims(), view4.getX(), view4.getY());
+
+                 
+        paintMaxims(g, ipoints1, view1.getX(), view1.getY());
+        paintMaxims(g, ipoints2, view4.getX(), view4.getY());
         g.setColor(Color.yellow);
         if (target1 != null) {
             g.setColor(Color.BLUE);

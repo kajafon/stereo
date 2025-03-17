@@ -17,6 +17,7 @@ import stereo.Triangulator;
 import stereo.to3d.Face;
 import stereo.to3d.FaceMetric;
 import stereo.to3d.FtrLink;
+import stereo.to3d.MatchedFtr;
 import stereo_praha.Algebra;
 
 /**
@@ -32,8 +33,9 @@ public class ApproachingPerfection
     public double[][]stampWeights;
     
     public Greyscale gs;
+    public Greyscale gsExp;
     Greyscale gsGrad;
-    public static int stampSize = 16;
+    public static int stampSize = 20;
     ArrayList[][] proxiGrid;
     double proximity = 0.3;
     int gridTileSize;
@@ -63,44 +65,82 @@ public class ApproachingPerfection
         gs = Greyscale.toGreyscale(img);        
         //maxims = gsGrad.localMaxims(null, null, 200);
         
-        calcMaxims();
         grad = gsGrad.createImage(null);
+        
+        gsExp = smoothCorner(gs, 5);
+        maxims = calcMaxims(gsExp);
 
         
         features = buildFeatures(maxims, gs);
-        
-        buildProximityGrid();
     }
 
     
-    void buildProximityGrid()
+    
+    static ArrayList<int[]> calcMaxims(Greyscale src)
     {
-        gridTileSize = (int)(img.getWidth()*proximity);
-        int gridSizeX = img.getWidth()/gridTileSize+1;
-        int gridSizeY = img.getHeight()/gridTileSize+1;
-
-        ArrayList[][] grid = new ArrayList[gridSizeX][gridSizeY];
-        for (int j=0;j<gridSizeY; j++)
-            for (int i=0;i<gridSizeX; i++)
-                grid[i][j] =  new ArrayList();
+        ArrayList<int[]> maxims = src.localMaxims(null, 90);
+        return maxims;
+//        maxims = gsGrad.localMaxims_FAST(4, proximity, 50);        
+    
+    }
+    
+    Greyscale smoothCorner(Greyscale src, int cornerThrs) {
+        Greyscale res = new Greyscale(src.width, src.height);
+        int[] tmp = new int[src.px.length];
+        int min = 100000;
+        int max = -10000;
+        int cirRad = 5;
+        CircleRaster cir = new CircleRaster(cirRad);
+        int cornerLength = cir.length() * 4 / 5;
+        for (int j = cirRad; j<src.height-cirRad; j++) {
+            for (int i = cirRad; i<src.width-cirRad; i++) {
+                int v = src.get(i, j);
+                int sum = 0;
+                int cornerCount = 0;
+                boolean isCorner = false;
+                
+                for (int k=0; k<cir.length(); k++) {
+                    int vk = src.get(i+cir.getX(k), j+cir.getY(k));                    
+                    int pxDif = v - vk;
+                    if (pxDif < 0) {
+                        pxDif = -pxDif;
+                    }
+                    
+                    if (pxDif > cornerThrs) {
+                        cornerCount++;
+                        if (cornerCount >= cornerLength) {
+                            isCorner = true;
+                        }
+                    } else {
+                        cornerCount = 0;
+                    }
+                    
+                    sum += pxDif*pxDif;                    
+                }               
+                if (!isCorner) {
+                    sum = 0;
+                }
+                
+                tmp[j*res.width + i] = sum;                
+                if (min > sum) {
+                    min = sum;
+                }
+                if (max < sum) {
+                    max = sum;
+                }
+            }            
+        }    
         
-        for (Feature f:features)
-        {
-            int i = f.x/gridTileSize;
-            int j = f.y/gridTileSize;
-            grid[i][j].add(f);
+        int range = max - min;
+        
+        for (int i=0; i<res.px.length; i++) {
+            res.px[i] = (short)((double)(tmp[i]-min)/range*255);
         }
         
-        proxiGrid = grid;
+        return res;
     }
     
-    void calcMaxims()
-    {
-        maxims = gsGrad.localMaxims(maxims, 200);
-//        maxims = gsGrad.localMaxims_FAST(4, proximity, 50);        
-    }
-    
-    void _calcMaxims()
+    static ArrayList<int[]> _calcMaxims(Greyscale gsGrad)
     {
         
         long before = System.currentTimeMillis();
@@ -110,7 +150,7 @@ public class ApproachingPerfection
         ArrayList<Edge> edgesVerti = Numeric.vectorize(gsGrad, true, valueTreshold, lengthTreshold);
         ArrayList<Edge> edgesHoriz = Numeric.vectorize(gsGrad, false, valueTreshold, lengthTreshold);
         
-        maxims = new ArrayList<int[]>(500);
+        ArrayList<int[]> maxims = new ArrayList<int[]>(500);
         
         for (Edge e:edgesVerti)
         {
@@ -140,6 +180,8 @@ public class ApproachingPerfection
         }
         
         System.out.println("maxims took " + (System.currentTimeMillis() - before) + "ms");
+        
+        return maxims;
     }
     
     public ArrayList<int[]> getMaxims()
@@ -157,59 +199,9 @@ public class ApproachingPerfection
     {
         return grad;
     }
+  
     
-    public ArrayList<FtrLink> findLinks_withProxymity(ApproachingPerfection other)
-    {
-        long before = System.currentTimeMillis();
-        ArrayList<FtrLink> links = new ArrayList<FtrLink>();
-        System.out.println("finding links...");
-        
-        for (Feature f:features)
-        {
-            int gridi=f.x/other.gridTileSize;
-            int gridj=f.y/other.gridTileSize;
-            
-            TreeMap<Double, Feature> localLinks = new TreeMap<>();
-            
-            for (int i=gridi-1; i<gridi+1; i++)
-            {
-                if (i<0) continue;
-                if (i>=other.proxiGrid.length)
-                    break;
-                for (int j=gridj-1;j<gridj+1; j++)
-                {
-                    if (j<0) continue;
-                    if (j>=other.proxiGrid[0].length)
-                        continue;
-                    
-                    if (i==12 || j==12)
-                        System.out.println("kokot");
-                    for (Object o:other.proxiGrid[i][j])
-                    {
-                        Feature f2 = (Feature)o;
-                        double e = Feature.compare(f, f2, stampWeights);
-                        localLinks.put(e, f2);
-                        if (localLinks.size() > 5) {
-                            localLinks.pollLastEntry();
-                        }
-                    }
-                }
-            }
-            
-            FtrLink l = new FtrLink(f, null, 0);            
-            l.candidates = new ArrayList<>();
-            for (Feature _f : localLinks.values()) {
-                l.candidates.add(_f);
-            }
-            links.add(l);
-        }
-        
-        System.out.println("found " + links.size() + " links in " + (System.currentTimeMillis() - before) + " ms");
-       
-        return links;
-        
-    }
-    
+  
     public ArrayList<FtrLink> findLinks(ApproachingPerfection other)
     {
         long before = System.currentTimeMillis();
@@ -217,79 +209,50 @@ public class ApproachingPerfection
         System.out.println(" finding links...");
         for (Feature f:features)
         {
-            TreeMap<Double, Feature> localLinks = new TreeMap<>();
+            TreeMap<Double, MatchedFtr> candidatesMap = new TreeMap<>();
 
             for (Feature f2:other.features)
             {
                 double e = Feature.compare(f, f2, stampWeights);
-                localLinks.put(e, f2);
-                if (localLinks.size() > 5)
+                candidatesMap.put(e, new MatchedFtr(f2, e, 0));
+                if (candidatesMap.size() > 20)
                 {
-                    localLinks.pollLastEntry();
+                    candidatesMap.pollLastEntry();
                 }
             }
             
-            FtrLink l = new FtrLink(f, localLinks.firstEntry().getValue(), 0);
-            l.candidates = new ArrayList<>();
-            for (Feature _f : localLinks.values()) {
-                l.candidates.add(_f);
+            if (candidatesMap.size() > 0) {
+                FtrLink l = new FtrLink(f, candidatesMap.firstEntry().getValue(), 0);
+                for (MatchedFtr _mf2 : candidatesMap.values()) {
+                    _mf2.f.numRefs++;
+                    l.candidates.add(_mf2);
+                }
+
+                links.add(l);
             }
-            
-            links.add(l);
         }
-        System.out.println("found " + links.size() + " links in " + (System.currentTimeMillis() - before) + " ms");
-        return links;
+        int REF_THRSH = 10;
+        ArrayList<FtrLink> filteredLinks = new ArrayList<>(links.size());
+        for (FtrLink link :links) 
+        {
+            ArrayList<MatchedFtr> filteredCndts = new ArrayList<>();
+            for (MatchedFtr mf2 : link.candidates) {
+                if (mf2.f.numRefs < REF_THRSH) {
+                    filteredCndts.add(mf2);
+                }                
+            }
+            link.candidates = filteredCndts;            
+            if (link.candidates.size() > 0 && link.candidates.size() < REF_THRSH) {
+                link.setF2(link.candidates.get(0));
+                filteredLinks.add(link);                
+            }             
+        }
+        
+        System.out.println("found " + filteredLinks.size() + " links in " + (System.currentTimeMillis() - before) + " ms");
+        return filteredLinks;
     }
     
-    void killMaveriks(ArrayList<FtrLink> links)
-    {
-        if (links.size() == 0) {
-            return;
-        }
-      //----- statistics to remove crazy maveriks links accross the image span
-        long before = System.currentTimeMillis();
-        int driftx = 0;
-        int drifty = 0;
-        for (FtrLink l:links)
-        {
-            driftx += Math.abs(l.f1.x - l.f2.x);
-            drifty += Math.abs(l.f1.y - l.f2.y);
-        }
-        
-        driftx /= links.size();
-        drifty /= links.size();
-        
-        double devx = 0;
-        double devy = 0;
-        
-        for (FtrLink l:links)
-        {
-            int v = Math.abs(l.f1.x - l.f2.x) - driftx;
-            devx += v*v;
-            v = Math.abs(l.f1.y - l.f2.y) - drifty;
-            devy += v*v;
-        }
-        
-        devx = Math.sqrt(devx/links.size());
-        devy = Math.sqrt(devy/links.size());
-        
-        int countbefore = links.size();
-                
-        for (int i=0; i<links.size(); )
-        {
-            FtrLink l = links.get(i);
-            double v1 = Math.abs(l.f1.x - l.f2.x) - devx;
-            double v2 = Math.abs(l.f1.y - l.f2.y) - devy;
-            if (v1 > devx*1.2 || v2 > devy*1.2)
-                links.remove(i);
-            else
-                i++;
-   
-        }
-        System.out.println("found and killed " + (countbefore - links.size()) + " maveriks in " + (System.currentTimeMillis() - before) + "ms");
-    }
-    
-    double[][] calcWeights()
+    static double[][] calcWeights()
     {
         double [][] weight = new double[stampSize][stampSize];
         int m = (stampSize*stampSize-2)/4;
@@ -327,7 +290,7 @@ public class ApproachingPerfection
     public Feature buildFeature(int x0, int y0)
     {
         int[] midVal = new int[1];
-        double[][] stamp1 = buildStamp(gs, x0, y0, stampSize, stampWeights, midVal);
+        double[][] stamp1 = buildStamp(gs, x0, y0, stampSize, stampWeights, null);
         
         Feature f = new Feature(x0, y0);
         f.stamp = stamp1;
@@ -336,12 +299,14 @@ public class ApproachingPerfection
         return f;
     }
     
-    public static double[][] buildStamp(Greyscale g, int x0, int y0, int stampSize, double[][] stampWeights, int[] midValPtr)
+    public static double[][] buildStamp(Greyscale g, int x0, int y0, int stampSize, double[][] stampWeights, double[][] stamp)
     {
         int x1 = x0 - stampSize/2;
         int y1 = y0 - stampSize/2;
 
-        double [][] stamp = new double[stampSize][stampSize];
+        if (stamp == null) {
+            stamp = new double[stampSize][stampSize];
+        }
         double center = 0;
         int count = 0;
         double weightSum = 0; 
@@ -366,6 +331,8 @@ public class ApproachingPerfection
         if (count == 0)
             return null;
         
+//        System.out.println("weight sum:" + weightSum + ", center:" + center);
+        
         center /= weightSum;
 //        center /= count;
         
@@ -388,7 +355,7 @@ public class ApproachingPerfection
             }
         }
         
-        dev = Math.sqrt(dev/count);
+        dev = Math.sqrt(dev)/count;
         
         if (dev > 0)
         {
@@ -404,45 +371,103 @@ public class ApproachingPerfection
                     if (x < 0 || x >= g.width)
                         continue;
 
-                    double v = g.get(x, y);
+                    double v = g.get(x, y);                    
+                    v -= center;
                     stamp[j][i] = v/dev*stampWeights[j][i];
                 }
             }
         }
-        if (midValPtr != null)
-            midValPtr[0] = (int)center;
         return stamp;
     }
     
-    public static Histogram calcLinkAngleHistogram(ArrayList<FtrLink> list)
-    {
-        Histogram histogram = new Histogram(-4, 4, 200);
-        for (int i=0; i<list.size()-1; i++)
-        {
-            FtrLink link1 = list.get(i);
-            for (int j=i+1; j<list.size(); j++)
-            {
-                
-                FtrLink link2 = list.get(j);
-                int dx1 = link1.f1.x - link2.f1.x;
-                int dx2 = link1.f2.x - link2.f2.x;
-                int dy1 = link1.f1.y - link2.f1.y;
-                int dy2 = link1.f2.y - link2.f2.y;
-
-                double angle1 = Math.atan2(dy1, dx1);
-                double angle2 = Math.atan2(dy2, dx2);
-                double dif = angle1 - angle2;
-                if (dif > Math.PI)
-                    dif = -2*Math.PI + dif;
-                if (dif < -Math.PI)
-                    dif = 2*Math.PI + dif;
-                
-                
-                histogram.add(dif);
-            }
-        }
-        return histogram;
+    public interface MinimumCallback {
+        void run(double[][] stamp1, double[][] stamp2, int x2, int y2, double a);
     }
+    
+    public static void findMinimum(Greyscale gs1, int x1, int y1, Greyscale gs2, int x2, int y2, double[][] stampWeights, MinimumCallback callback) {
+        System.out.println(" = settling = ");
+        double[][] stamp1 = buildStamp(gs1, x1, y1, stampSize, stampWeights, null);
+        double[][] stamp2 = null;
+        int[][] positions = new int[5][2];
+        
+        Greyscale stamp2Gs = new Greyscale(2 * stampSize, 2 * stampSize);
+        double target2Angle = 0;
+
+        int xt = x2;
+        int yt = y2;
+        
+        int stampMid = stampSize;        
+        double lastErr = 10000;
+        
+        boolean advancing = true;
+        
+        for (int safety = 20; advancing && safety > 0; safety-- ){
+            advancing = false;
+            positions[0][0] = xt;
+            positions[0][1] = yt;
+            positions[1][0] = xt+1;
+            positions[1][1] = yt;
+            positions[2][0] = xt-1;
+            positions[2][1] = yt;
+            positions[3][0] = xt;
+            positions[3][1] = yt+1;
+            positions[4][0] = xt;
+            positions[4][1] = yt-1;
+            
+            double emin = lastErr;
+            int winnerIndex = -1;
+            
+            for (int i=0; i<positions.length; i++) {
+                stamp2Gs.drawRotatedStamp(stampMid, stampMid, positions[i][0], positions[i][1], stampSize, target2Angle, gs2);
+                stamp2 = ApproachingPerfection.buildStamp(stamp2Gs, stampMid, stampMid, stampSize, stampWeights, stamp2);
+                double e = Algebra.compare(stamp1, stamp2);   
+                System.out.println("e" + i + ": " + e + " / " + lastErr);
+                if (e < emin) {
+                    winnerIndex = i;
+                    emin = e;
+                }                
+            }
+            
+            if (winnerIndex >= 0) {
+                xt = positions[winnerIndex][0];
+                yt = positions[winnerIndex][1];
+                advancing = true;
+                lastErr = emin;
+                
+                if (callback != null) {
+                    stamp2Gs.drawRotatedStamp(stampMid, stampMid, xt, yt, stampSize, target2Angle, gs2);
+                    stamp2 = ApproachingPerfection.buildStamp(stamp2Gs, stampMid, stampMid, stampSize, stampWeights, stamp2);
+                    callback.run(stamp1, stamp2, xt, yt, target2Angle);
+                }
+            }
+            
+            double a = target2Angle + Math.PI/80;
+            stamp2Gs.drawRotatedStamp(stampMid, stampMid, xt, yt, stampSize, a, gs2);
+            stamp2 = ApproachingPerfection.buildStamp(stamp2Gs, stampMid, stampMid, stampSize, stampWeights, stamp2);
+            emin = Algebra.compare(stamp1, stamp2);                
+            
+            double a2 = target2Angle - Math.PI/80;
+            stamp2Gs.drawRotatedStamp(stampMid, stampMid, xt, yt, stampSize, a, gs2);
+            stamp2 = ApproachingPerfection.buildStamp(stamp2Gs, stampMid, stampMid, stampSize, stampWeights, stamp2);
+            double e2 = Algebra.compare(stamp1, stamp2);                
+            
+            if (e2 < emin) {
+                emin = e2;
+                a = a2;
+            }
+            
+            if (emin < lastErr) {
+                lastErr = emin;
+                target2Angle = a;
+                advancing = true;
+                if (callback != null) {
+                    stamp2Gs.drawRotatedStamp(stampMid, stampMid, xt, yt, stampSize, target2Angle, gs2);
+                    stamp2 = ApproachingPerfection.buildStamp(stamp2Gs, stampMid, stampMid, stampSize, stampWeights, stamp2);
+                    callback.run(stamp1, stamp2, xt, yt, target2Angle);
+                }
+            }            
+        }        
+    }    
     
     public static ArrayList<Face> triangulate(ArrayList<FtrLink> list)
     {
@@ -465,7 +490,7 @@ public class ApproachingPerfection
             @Override
             public int x2(Object o)
             {
-                return ((FtrLink)o).f2.x;
+                return ((FtrLink)o).mf2.f.x;
             }
 
             @Override
@@ -477,7 +502,7 @@ public class ApproachingPerfection
             @Override
             public int y2(Object o)
             {
-                return ((FtrLink)o).f2.y;
+                return ((FtrLink)o).mf2.f.y;
             }
         };
         ArrayList faceList = Triangulator.run(list, null, la, fc);
@@ -522,14 +547,14 @@ public class ApproachingPerfection
             Algebra.scale(d1, 1.0/_s);
             
             double max = 0;
-            Feature f1max = null;
-            Feature f2max = null;
-            Feature f3max = null;
+            MatchedFtr f1max = null;
+            MatchedFtr f2max = null;
+            MatchedFtr f3max = null;
             
-            for (Feature f1:l1.candidates) {
-                for (Feature f2:l2.candidates) {
-                    for (Feature f3:l3.candidates) {
-                        faceDescriptor(f1.x, f1.y, f2.x, f2.y, f3.x, f3.y, d2);
+            for (MatchedFtr mf1:l1.candidates) {
+                for (MatchedFtr mf2:l2.candidates) {
+                    for (MatchedFtr mf3:l3.candidates) {
+                        faceDescriptor(mf1.f.x, mf1.f.y, mf2.f.x, mf2.f.y, mf3.f.x, mf3.f.y, d2);
                         double _s2 = Algebra.size(d2);
                         if (_s2 == 0) {
                             continue;
@@ -539,92 +564,94 @@ public class ApproachingPerfection
                         w /= _s;                    
                         if (w > max) {
                             max = w;
-                            f1max = f1;
-                            f2max = f2;
-                            f3max = f3;
+                            f1max = mf1;
+                            f2max = mf2;
+                            f3max = mf3;
                         }
                     }
                 }                
             }
             
             if (max > 0) {
-                l1.f2 = f1max;
-                l2.f2 = f2max;
-                l3.f2 = f3max;
+                l1.setF2(f1max);
+                l2.setF2(f2max);
+                l3.setF2(f3max);
             }   
             
             System.out.println("face " + i + " / " + faces.size());
         }        
-    }
-    
-    public static SiftStamp buildSiftStamp(Greyscale gs, int xs, int ys) {
-        if (xs < 5 || xs > gs.width - 5 || ys < 5 || ys > gs.height - 5) {
-            return null;
-        }
-        int[] mainHistogram = new int[32];
-        int[][] quadHisto = new int[4][];
-        int[] resultHisto = new int[4*16];
-        for (int i=0; i<quadHisto.length; i++) {
-            quadHisto[i] = new int[16];
-        }
-        
-        for (int j=0; j<8; j++) {
-            int adr = (ys - 4 + j)*gs.width;
-            for (int i=0; i<8; i++) {
-                int pxAdr = adr + xs - 4 + i;                
-                int n = gs.px[pxAdr - gs.width];
-                int s = gs.px[pxAdr + gs.width];
-                int w = gs.px[pxAdr - 1];
-                int e = gs.px[pxAdr + 1];
-                
-                int dx = e - w;
-                int dy = s - n;
-                
-                double a = Math.atan2(dy, dx);                
-                double na = (a + Math.PI) / (2*Math.PI);
-                int mainI = (int)(na*(mainHistogram.length-1));
-                mainHistogram[mainI] += 1;
-                int hy = 2*j/8;
-                int hx = 2*i/8;
-                int hi = hy*2 + hx;
-                int[] qh = quadHisto[hi];                
-                int qhi = (int)(na*(qh.length-1));
-                qh[qhi] += 1;                           
-            }            
-        }
-        int max = 0;
-        int mi = 0;
-        for (int i=0; i<mainHistogram.length; i++) {
-            if (max < mainHistogram[i]) {
-                max = mainHistogram[i];
-                mi = i;
-            }
-        }
-        
-        /* principal angle in index dimension of smaller histogram of a quadrant.
-           detected principal rotation will be eliminated by shifting values of quadrant histograms 
-           by "id" bin positions
-        */
-        int id = (int)((double)mi / (mainHistogram.length-1) * (quadHisto[0].length-1));
-//        double mainA = (double)mi / (mainHistogram.length-1) *2*Math.PI - Math.PI;
-        
-        for (int j=0; j<quadHisto.length; j++) {
-            for (int i=0; i<quadHisto[j].length; i++) {
-                int ri = i - id;
-                if (ri < 0) {
-                    ri = quadHisto[j].length + ri;
-                }
-                
-                int rhi = j * 16 + ri;
-                if (rhi >= resultHisto.length) {
-                    System.out.println("kokot");
-                }
-                resultHisto[rhi] = quadHisto[j][i];                
-            }            
-        }
-        double a = (double)mi/(mainHistogram.length-1)*2*Math.PI - Math.PI;
-        return new SiftStamp(resultHisto, a);        
-    }
+    }  
+//    void buildProximityGrid()
+//    {
+//        gridTileSize = (int)(img.getWidth()*proximity);
+//        int gridSizeX = img.getWidth()/gridTileSize+1;
+//        int gridSizeY = img.getHeight()/gridTileSize+1;
+//
+//        ArrayList[][] grid = new ArrayList[gridSizeX][gridSizeY];
+//        for (int j=0;j<gridSizeY; j++)
+//            for (int i=0;i<gridSizeX; i++)
+//                grid[i][j] =  new ArrayList();
+//        
+//        for (Feature f:features)
+//        {
+//            int i = f.x/gridTileSize;
+//            int j = f.y/gridTileSize;
+//            grid[i][j].add(f);
+//        }
+//        
+//        proxiGrid = grid;
+//    }
+//        public ArrayList<FtrLink> findLinks_withProxymity(ApproachingPerfection other)
+//    {
+//        long before = System.currentTimeMillis();
+//        ArrayList<FtrLink> links = new ArrayList<FtrLink>();
+//        System.out.println("finding links...");
+//        
+//        for (Feature f:features)
+//        {
+//            int gridi=f.x/other.gridTileSize;
+//            int gridj=f.y/other.gridTileSize;
+//            
+//            TreeMap<Double, Feature> localLinks = new TreeMap<>();
+//            
+//            for (int i=gridi-1; i<gridi+1; i++)
+//            {
+//                if (i<0) continue;
+//                if (i>=other.proxiGrid.length)
+//                    break;
+//                for (int j=gridj-1;j<gridj+1; j++)
+//                {
+//                    if (j<0) continue;
+//                    if (j>=other.proxiGrid[0].length)
+//                        continue;
+//                    
+//                    if (i==12 || j==12)
+//                        System.out.println("kokot");
+//                    for (Object o:other.proxiGrid[i][j])
+//                    {
+//                        Feature f2 = (Feature)o;
+//                        double e = Feature.compare(f, f2, stampWeights);
+//                        localLinks.put(e, f2);
+//                        if (localLinks.size() > 5) {
+//                            localLinks.pollLastEntry();
+//                        }
+//                    }
+//                }
+//            }
+//            
+//            FtrLink l = new FtrLink(f, null, 0);  
+//            for (Feature _f : localLinks.values()) {
+//                l.candidates.add(_f);
+//            }
+//            links.add(l);
+//        }
+//        
+//        System.out.println("found " + links.size() + " links in " + (System.currentTimeMillis() - before) + " ms");
+//       
+//        return links;
+//        
+//    }
 }
 
 
+    
